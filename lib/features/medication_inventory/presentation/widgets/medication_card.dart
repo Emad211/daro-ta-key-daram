@@ -153,9 +153,6 @@ class _Metric extends StatelessWidget {
 class _UrgencyStyle {
   const _UrgencyStyle({required this.background, required this.foreground});
 
-  final Color background;
-  final Color foreground;
-
   factory _UrgencyStyle.from(BuildContext context, MedicationUrgency urgency) {
     return switch (urgency) {
       MedicationUrgency.safe => const _UrgencyStyle(
@@ -176,4 +173,7 @@ class _UrgencyStyle {
       ),
     };
   }
+
+  final Color background;
+  final Color foreground;
 }

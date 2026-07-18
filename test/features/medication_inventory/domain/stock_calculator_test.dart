@@ -15,7 +15,6 @@ void main() {
         stockAtRecord: 30,
         unitsPerDay: 2,
         inventoryRecordedAt: recordedAt,
-        alertLeadDays: 5,
       );
 
       final MedicationStockSnapshot snapshot = medication.stockAt(recordedAt);
@@ -35,7 +34,6 @@ void main() {
         stockAtRecord: 10,
         unitsPerDay: 2,
         inventoryRecordedAt: recordedAt,
-        alertLeadDays: 5,
       );
 
       final MedicationStockSnapshot snapshot = medication.stockAt(

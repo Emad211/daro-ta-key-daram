@@ -19,7 +19,6 @@ class InMemoryMedicationRepository implements MedicationRepository {
           stockAtRecord: 30,
           unitsPerDay: 2,
           inventoryRecordedAt: now,
-          alertLeadDays: 5,
         ),
         Medication(
           id: 'demo-vitamin-d',
