@@ -1,0 +1,54 @@
+name: Diagnose lifecycle implementation
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Prepare project
+        run: |
+          if [ ! -d android ]; then
+            flutter create --no-pub --platforms=android --org ir.emadkarimi --project-name daro_ta_key_daram .
+          fi
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+
+      - name: Capture diagnostics
+        run: |
+          mkdir -p .ci-diagnostics
+          set +e
+          flutter analyze > .ci-diagnostics/analyze.txt 2>&1
+          echo $? > .ci-diagnostics/analyze-exit-code.txt
+          flutter test -r expanded > .ci-diagnostics/test.txt 2>&1
+          echo $? > .ci-diagnostics/test-exit-code.txt
+          exit 0
+
+      - name: Commit diagnostics
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .ci-diagnostics
+          git commit -m "ci: capture lifecycle diagnostics"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
