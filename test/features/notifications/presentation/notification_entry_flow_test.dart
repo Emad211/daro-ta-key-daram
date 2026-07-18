@@ -62,9 +62,7 @@ void main() {
     );
     final _FakeNotificationService notifications = _FakeNotificationService(
       permission: NotificationPermissionState.denied,
-      launchPayload: const NotificationPayload(
-        medicationId: 'medication-1',
-      ),
+      launchPayload: const NotificationPayload(medicationId: 'medication-1'),
     );
 
     await tester.pumpWidget(
