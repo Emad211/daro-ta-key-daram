@@ -1,6 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../notifications/application/local_notification_service.dart';
+import '../../../notifications/application/notification_sync_coordinator.dart';
+import '../../../notifications/infrastructure/flutter_local_notification_service.dart';
+import '../../../notifications/infrastructure/noop_local_notification_service.dart';
+import '../../../notifications/infrastructure/notification_aware_medication_repository.dart';
 import '../../application/inventory_event_service.dart';
 import '../../application/medication_repository.dart';
 import '../../domain/inventory_event.dart';
@@ -18,11 +24,38 @@ final Provider<AppDatabase> appDatabaseProvider = Provider<AppDatabase>((
   return database;
 });
 
-final Provider<MedicationRepository> medicationRepositoryProvider =
+final Provider<MedicationRepository> rawMedicationRepositoryProvider =
     Provider<MedicationRepository>((Ref ref) {
       return DriftMedicationRepository(
         ref.watch(appDatabaseProvider),
         clock: ref.watch(clockProvider),
+      );
+    });
+
+final Provider<LocalNotificationService> localNotificationServiceProvider =
+    Provider<LocalNotificationService>((Ref ref) {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        return FlutterLocalNotificationService();
+      }
+      return const NoopLocalNotificationService();
+    });
+
+final Provider<NotificationSyncCoordinator>
+notificationSyncCoordinatorProvider = Provider<NotificationSyncCoordinator>((
+  Ref ref,
+) {
+  return NotificationSyncCoordinator(
+    medicationRepository: ref.watch(rawMedicationRepositoryProvider),
+    notificationService: ref.watch(localNotificationServiceProvider),
+    clock: ref.watch(clockProvider),
+  );
+});
+
+final Provider<MedicationRepository> medicationRepositoryProvider =
+    Provider<MedicationRepository>((Ref ref) {
+      return NotificationAwareMedicationRepository(
+        ref.watch(rawMedicationRepositoryProvider),
+        ref.watch(notificationSyncCoordinatorProvider),
       );
     });
 

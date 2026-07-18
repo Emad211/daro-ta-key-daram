@@ -6,13 +6,9 @@ if ! command -v flutter >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ ! -d android ]]; then
-  flutter create \
-    --no-pub \
-    --platforms=android \
-    --org ir.emadkarimi \
-    --project-name daro_ta_key_daram \
-    .
+if [[ ! -f android/app/build.gradle.kts ]]; then
+  echo "The committed Android project is missing." >&2
+  exit 1
 fi
 
 flutter pub get
@@ -20,5 +16,6 @@ dart run build_runner build --delete-conflicting-outputs
 dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
+flutter build apk --debug
 
-echo "Bootstrap and validation completed successfully."
+echo "Bootstrap, validation, and Android debug build completed successfully."
