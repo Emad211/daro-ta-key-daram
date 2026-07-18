@@ -190,9 +190,8 @@ final class DriftMedicationRepository implements MedicationRepository {
           ]);
 
     return query.watch().map(
-      (List<InventoryEventRow> rows) => List<InventoryEvent>.unmodifiable(
-        rows.map(_toInventoryEventDomain),
-      ),
+      (List<InventoryEventRow> rows) =>
+          List<InventoryEvent>.unmodifiable(rows.map(_toInventoryEventDomain)),
     );
   }
 

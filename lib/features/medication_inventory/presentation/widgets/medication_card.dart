@@ -108,8 +108,7 @@ class MedicationCard extends StatelessWidget {
                       value: _date(snapshot.depletionAt),
                     ),
                   ),
-                  if (onTap != null)
-                    const Icon(Icons.chevron_left, size: 22),
+                  if (onTap != null) const Icon(Icons.chevron_left, size: 22),
                 ],
               ),
             ],

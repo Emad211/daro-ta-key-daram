@@ -129,7 +129,8 @@ class InMemoryMedicationRepository implements MedicationRepository {
           previous.inventoryRecordedAt != medication.inventoryRecordedAt;
       if (baselineChanged) {
         final InventoryEvent correction = InventoryEvent(
-          id: 'memory-correction-${medication.id}-'
+          id:
+              'memory-correction-${medication.id}-'
               '${medication.inventoryRecordedAt.microsecondsSinceEpoch}',
           medicationId: medication.id,
           type: InventoryEventType.correction,

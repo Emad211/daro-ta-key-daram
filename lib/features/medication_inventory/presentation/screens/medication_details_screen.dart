@@ -30,9 +30,7 @@ class MedicationDetailsScreen extends ConsumerWidget {
       error: (Object error, StackTrace stackTrace) => Scaffold(
         appBar: AppBar(title: const Text('جزئیات دارو')),
         body: _LoadError(
-          onRetry: () => ref.invalidate(
-            medicationByIdProvider(medicationId),
-          ),
+          onRetry: () => ref.invalidate(medicationByIdProvider(medicationId)),
         ),
       ),
       loading: () => Scaffold(
@@ -71,38 +69,30 @@ class _MedicationDetailsScaffold extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: <Widget>[
-            _StockSummaryCard(
-              medication: medication,
-              snapshot: snapshot,
-            ),
+            _StockSummaryCard(medication: medication, snapshot: snapshot),
             const SizedBox(height: 14),
             _ActionCard(
-              onRestock: () => _showInventoryForm(
-                context,
-                InventoryEventType.restock,
-              ),
-              onCorrection: () => _showInventoryForm(
-                context,
-                InventoryEventType.correction,
-              ),
+              onRestock: () =>
+                  _showInventoryForm(context, InventoryEventType.restock),
+              onCorrection: () =>
+                  _showInventoryForm(context, InventoryEventType.correction),
             ),
             const SizedBox(height: 14),
             _MedicationInformationCard(medication: medication),
             const SizedBox(height: 22),
             Text(
               'تاریخچه موجودی',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 10),
             history.when(
               data: (List<InventoryEvent> events) =>
                   _InventoryTimeline(events: events, medication: medication),
               error: (Object error, StackTrace stackTrace) => _HistoryError(
-                onRetry: () => ref.invalidate(
-                  inventoryEventsProvider(medication.id),
-                ),
+                onRetry: () =>
+                    ref.invalidate(inventoryEventsProvider(medication.id)),
               ),
               loading: () => const Center(
                 child: Padding(
@@ -126,10 +116,8 @@ class _MedicationDetailsScaffold extends ConsumerWidget {
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (BuildContext context) => InventoryEventFormSheet(
-        medication: medication,
-        type: type,
-      ),
+      builder: (BuildContext context) =>
+          InventoryEventFormSheet(medication: medication, type: type),
     );
 
     if (saved == true && context.mounted) {
@@ -176,25 +164,22 @@ class _MedicationDetailsScaffold extends ConsumerWidget {
       ref.invalidate(medicationByIdProvider(medication.id));
       if (context.mounted) {
         context.go('/');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('دارو آرشیو شد.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('دارو آرشیو شد.')));
       }
     } on Object {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('آرشیو دارو انجام نشد.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('آرشیو دارو انجام نشد.')));
       }
     }
   }
 }
 
 class _StockSummaryCard extends StatelessWidget {
-  const _StockSummaryCard({
-    required this.medication,
-    required this.snapshot,
-  });
+  const _StockSummaryCard({required this.medication, required this.snapshot});
 
   final Medication medication;
   final MedicationStockSnapshot snapshot;
@@ -245,10 +230,7 @@ class _StockSummaryCard extends StatelessWidget {
 }
 
 class _ActionCard extends StatelessWidget {
-  const _ActionCard({
-    required this.onRestock,
-    required this.onCorrection,
-  });
+  const _ActionCard({required this.onRestock, required this.onCorrection});
 
   final VoidCallback onRestock;
   final VoidCallback onCorrection;
@@ -298,7 +280,8 @@ class _MedicationInformationCard extends StatelessWidget {
             _InformationRow(
               icon: Icons.schedule_outlined,
               label: 'مصرف ثبت‌شده روزانه',
-              value: '${_number(medication.unitsPerDay)} '
+              value:
+                  '${_number(medication.unitsPerDay)} '
                   '${medication.unit.persianLabel}',
             ),
             const Divider(height: 24),
