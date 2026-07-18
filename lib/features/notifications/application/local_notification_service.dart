@@ -3,16 +3,10 @@ import 'dart:async';
 import '../domain/notification_payload.dart';
 import '../domain/notification_plan.dart';
 
-enum NotificationPermissionState {
-  granted,
-  denied,
-  notDetermined,
-  unsupported,
-}
+enum NotificationPermissionState { granted, denied, notDetermined, unsupported }
 
-typedef NotificationTapHandler = FutureOr<void> Function(
-  NotificationPayload payload,
-);
+typedef NotificationTapHandler =
+    FutureOr<void> Function(NotificationPayload payload);
 
 abstract interface class LocalNotificationService {
   Future<void> initialize({required NotificationTapHandler onTap});

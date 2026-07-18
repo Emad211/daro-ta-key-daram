@@ -46,7 +46,9 @@ final class LowStockNotificationPlanner {
       kind: isDepleted
           ? StockNotificationKind.depleted
           : StockNotificationKind.lowStock,
-      title: isDepleted ? 'موجودی دارو احتمالاً تمام شده' : 'موجودی دارو رو به اتمام است',
+      title: isDepleted
+          ? 'موجودی دارو احتمالاً تمام شده'
+          : 'موجودی دارو رو به اتمام است',
       body: isDepleted
           ? 'موجودی ${medication.name} را بررسی و در صورت خرید، عدد جدید را ثبت کنید.'
           : 'برای ${medication.name} حدود ${stock.fullRemainingDays} روز کامل موجودی باقی مانده است.',

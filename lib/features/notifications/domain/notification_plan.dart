@@ -1,9 +1,6 @@
 import 'notification_payload.dart';
 
-enum StockNotificationKind {
-  lowStock,
-  depleted,
-}
+enum StockNotificationKind { lowStock, depleted }
 
 final class NotificationPlan {
   const NotificationPlan({

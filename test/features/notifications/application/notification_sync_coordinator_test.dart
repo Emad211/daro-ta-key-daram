@@ -43,13 +43,10 @@ void main() {
 
     expect(await coordinator.rescheduleMedication(archived.id), isTrue);
     expect(await coordinator.rescheduleMedication('missing'), isTrue);
-    expect(
-      notifications.cancelled,
-      <int>[
-        NotificationId.forMedication(archived.id),
-        NotificationId.forMedication('missing'),
-      ],
-    );
+    expect(notifications.cancelled, <int>[
+      NotificationId.forMedication(archived.id),
+      NotificationId.forMedication('missing'),
+    ]);
   });
 
   test('schedule failures are non-blocking and reported as false', () async {
@@ -90,8 +87,7 @@ Medication _medication(DateTime now) {
   );
 }
 
-final class _RecordingNotificationService
-    implements LocalNotificationService {
+final class _RecordingNotificationService implements LocalNotificationService {
   final List<NotificationPlan> scheduled = <NotificationPlan>[];
   final List<int> cancelled = <int>[];
 
