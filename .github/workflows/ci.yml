@@ -42,18 +42,29 @@ jobs:
       - name: Apply canonical formatting
         run: dart format lib test
 
-      - name: Upload canonical Dart sources
+      - name: Capture analyzer output
+        id: analyze
+        continue-on-error: true
+        run: |
+          set +e
+          flutter analyze > analyzer-output.txt 2>&1
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          cat analyzer-output.txt
+          exit $status
+
+      - name: Upload analyzer output
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: canonical-medication-management-sources
-          path: |
-            lib
-            test
+          name: medication-management-analyzer-output
+          path: analyzer-output.txt
           if-no-files-found: error
           retention-days: 1
 
-      - name: Analyze
-        run: flutter analyze
+      - name: Enforce analyzer success
+        if: steps.analyze.outputs.exit_code != '0'
+        run: exit 1
 
       - name: Test
         run: flutter test --coverage
