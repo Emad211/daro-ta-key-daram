@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.0-dev.4 — 2026-07-18
+
+### Added
+
+- Committed Android platform project with application ID `ir.emadkarimi.darutakey`
+- Android local notification adapter using `flutter_local_notifications` 22.0.1
+- Device timezone initialization using `flutter_timezone` and the IANA timezone database
+- Stable, replaceable inexact low-stock and depleted notifications
+- Android 13+ user-triggered permission flow
+- Notification deep links to medication details
+- Boot and app-update notification receivers
+- Notification-aware repository decorator for create, restock, correction, archive, restore, and delete
+- Debug APK build and downloadable CI artifact
+- ADR and device-test checklist for notifications
+- Widget tests for no startup permission prompt and notification launch navigation
+
+### Changed
+
+- CI now validates the committed Android project and builds a real debug APK
+- Lifecycle writes synchronize notifications only after persistence succeeds
+- Notification failures remain non-blocking for medication operations
+
 ## 0.1.0-dev.3 — 2026-07-18
 
 ### Added

@@ -37,11 +37,14 @@
 
 ## Phase 3 — Notifications
 
-- [ ] permission flow اندروید
-- [ ] schedule / reschedule / cancel
-- [ ] boot persistence
-- [ ] timezone and device clock handling
-- [ ] notification deep links
+- [x] notification planning خالص و stable IDs
+- [x] permission flow آگاهانه Android 13+
+- [x] schedule / reschedule / cancel پس از persistence موفق
+- [x] boot و app-update persistence
+- [x] timezone initialization و fallback
+- [x] notification deep links
+- [x] committed Android project و debug APK build
+- [ ] تست روی دستگاه فیزیکی Android
 
 ## Phase 4 — Monetization integration
 
@@ -57,8 +60,8 @@
 
 - [ ] accessibility audit
 - [ ] RTL and large-font tests
-- [ ] integration tests
-- [ ] signed internal APK
+- [ ] integration tests روی دستگاه
+- [ ] signing config امن و APK/AAB داخلی
 - [ ] closed beta با ۱۰ تا ۲۰ کاربر
 - [ ] privacy policy و store listing
 - [ ] انتشار در کافه‌بازار و مایکت
