@@ -135,7 +135,6 @@ void main() {
         stockAtRecord: 2,
         unitsPerDay: 1,
         recordedAt: recordedAt,
-        alertLeadDays: 5,
       );
 
       final MedicationStockSnapshot snapshot = medication.stockAt(recordedAt);
