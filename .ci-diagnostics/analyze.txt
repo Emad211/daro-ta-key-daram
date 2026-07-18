@@ -1,0 +1,12 @@
+Analyzing daro-ta-key-daram...                                  
+
+  error • The property 'isNegative' can't be accessed on the type 'Duration' in a constant expression • lib/features/notifications/application/notification_sync_coordinator.dart:13:43 • const_eval_property_access
+   info • Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._medicationRepository') to initialize the field • lib/features/notifications/application/notification_sync_coordinator.dart:14:8 • prefer_initializing_formals
+   info • Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._notificationService') to initialize the field • lib/features/notifications/application/notification_sync_coordinator.dart:15:8 • prefer_initializing_formals
+   info • Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._clock') to initialize the field • lib/features/notifications/application/notification_sync_coordinator.dart:16:8 • prefer_initializing_formals
+   info • Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._planner') to initialize the field • lib/features/notifications/application/notification_sync_coordinator.dart:17:8 • prefer_initializing_formals
+  error • Invalid constant value • lib/features/notifications/domain/low_stock_notification_planner.dart:11:16 • invalid_constant
+   info • The value of the argument is redundant because it matches the default value. Try removing the argument • test/features/notifications/application/notification_sync_coordinator_test.dart:86:20 • avoid_redundant_argument_values
+  error • The property 'isNegative' can't be accessed on the type 'Duration' in a constant expression • test/features/notifications/domain/low_stock_notification_planner_test.dart:8:47 • const_eval_property_access
+
+8 issues found. (ran in 9.5s)
