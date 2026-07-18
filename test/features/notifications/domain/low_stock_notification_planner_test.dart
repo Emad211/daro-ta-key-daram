@@ -5,7 +5,7 @@ import 'package:daro_ta_key_daram/features/notifications/domain/notification_pla
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  const LowStockNotificationPlanner planner = LowStockNotificationPlanner();
+  final LowStockNotificationPlanner planner = LowStockNotificationPlanner();
 
   test('schedules a future reorder date at the preferred local hour', () {
     final DateTime now = DateTime(2026, 7, 18, 8);
@@ -77,6 +77,19 @@ void main() {
     );
 
     expect(planner.plan(medication: medication, now: now), isNull);
+  });
+
+  test('rejects invalid planner configuration', () {
+    expect(
+      () => LowStockNotificationPlanner(preferredLocalHour: 24),
+      throwsRangeError,
+    );
+    expect(
+      () => LowStockNotificationPlanner(
+        minimumLeadTime: const Duration(seconds: -1),
+      ),
+      throwsArgumentError,
+    );
   });
 }
 
