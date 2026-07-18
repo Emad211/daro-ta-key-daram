@@ -157,24 +157,12 @@ final class DriftMedicationRepository implements MedicationRepository {
 
   @override
   Stream<List<Medication>> watchActiveMedications() {
-    final JoinedSelectStatement<HasResultSet, dynamic> query =
-        _database
-            .select(_database.medications)
-            .join(<Join<HasResultSet, dynamic>>[
-              innerJoin(
-                _database.inventoryEvents,
-                _database.inventoryEvents.medicationId.equalsExp(
-                  _database.medications.id,
-                ),
-              ),
-            ])
-          ..where(_database.medications.isArchived.equals(false))
-          ..orderBy(<OrderingTerm>[
-            OrderingTerm.desc(_database.inventoryEvents.effectiveAt),
-            OrderingTerm.desc(_database.inventoryEvents.createdAt),
-          ]);
+    return _watchMedications(isArchived: false);
+  }
 
-    return query.watch().map(_latestMedicationRows);
+  @override
+  Stream<List<Medication>> watchArchivedMedications() {
+    return _watchMedications(isArchived: true);
   }
 
   @override
@@ -193,6 +181,27 @@ final class DriftMedicationRepository implements MedicationRepository {
       (List<InventoryEventRow> rows) =>
           List<InventoryEvent>.unmodifiable(rows.map(_toInventoryEventDomain)),
     );
+  }
+
+  Stream<List<Medication>> _watchMedications({required bool isArchived}) {
+    final JoinedSelectStatement<HasResultSet, dynamic> query =
+        _database
+            .select(_database.medications)
+            .join(<Join<HasResultSet, dynamic>>[
+              innerJoin(
+                _database.inventoryEvents,
+                _database.inventoryEvents.medicationId.equalsExp(
+                  _database.medications.id,
+                ),
+              ),
+            ])
+          ..where(_database.medications.isArchived.equals(isArchived))
+          ..orderBy(<OrderingTerm>[
+            OrderingTerm.desc(_database.inventoryEvents.effectiveAt),
+            OrderingTerm.desc(_database.inventoryEvents.createdAt),
+          ]);
+
+    return query.watch().map(_latestMedicationRows);
   }
 
   Future<void> _insertInventoryEvent(

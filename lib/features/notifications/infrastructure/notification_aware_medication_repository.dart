@@ -19,6 +19,11 @@ final class NotificationAwareMedicationRepository
   }
 
   @override
+  Stream<List<Medication>> watchArchivedMedications() {
+    return _delegate.watchArchivedMedications();
+  }
+
+  @override
   Stream<List<InventoryEvent>> watchInventoryEvents(String medicationId) {
     return _delegate.watchInventoryEvents(medicationId);
   }

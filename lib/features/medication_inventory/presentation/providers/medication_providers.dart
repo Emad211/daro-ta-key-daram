@@ -69,10 +69,12 @@ final Provider<InventoryEventService> inventoryEventServiceProvider =
 
 final StreamProvider<List<Medication>> activeMedicationsProvider =
     StreamProvider<List<Medication>>((Ref ref) {
-      final MedicationRepository repository = ref.watch(
-        medicationRepositoryProvider,
-      );
-      return repository.watchActiveMedications();
+      return ref.watch(medicationRepositoryProvider).watchActiveMedications();
+    });
+
+final StreamProvider<List<Medication>> archivedMedicationsProvider =
+    StreamProvider<List<Medication>>((Ref ref) {
+      return ref.watch(medicationRepositoryProvider).watchArchivedMedications();
     });
 
 final medicationByIdProvider = FutureProvider.family<Medication?, String>((

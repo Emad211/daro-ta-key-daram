@@ -21,12 +21,9 @@ class MedicationDetailsScreen extends ConsumerWidget {
     );
 
     return medication.when(
-      data: (Medication? value) {
-        if (value == null) {
-          return _MedicationNotFound(onBack: () => context.go('/'));
-        }
-        return _MedicationDetailsScaffold(medication: value);
-      },
+      data: (Medication? value) => value == null
+          ? _MedicationNotFound(onBack: () => context.go('/'))
+          : _MedicationDetailsScaffold(medication: value),
       error: (Object error, StackTrace stackTrace) => Scaffold(
         appBar: AppBar(title: const Text('جزئیات دارو')),
         body: _LoadError(
@@ -58,6 +55,14 @@ class _MedicationDetailsScaffold extends ConsumerWidget {
       appBar: AppBar(
         title: Text(medication.name),
         actions: <Widget>[
+          IconButton(
+            tooltip: 'ویرایش مشخصات',
+            onPressed: () => context.goNamed(
+              'edit-medication',
+              pathParameters: <String, String>{'medicationId': medication.id},
+            ),
+            icon: const Icon(Icons.edit_outlined),
+          ),
           IconButton(
             tooltip: 'آرشیو دارو',
             onPressed: () => _archive(context, ref),
@@ -161,6 +166,7 @@ class _MedicationDetailsScaffold extends ConsumerWidget {
       );
       await repository.archive(medication.id);
       ref.invalidate(activeMedicationsProvider);
+      ref.invalidate(archivedMedicationsProvider);
       ref.invalidate(medicationByIdProvider(medication.id));
       if (context.mounted) {
         context.go('/');
@@ -271,7 +277,7 @@ class _MedicationInformationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String notes = medication.notes?.trim() ?? '';
+    final String notes = medication.notes ?? '';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -375,6 +381,7 @@ class _InventoryTimeline extends StatelessWidget {
             const Divider(height: 1),
         itemBuilder: (BuildContext context, int index) {
           final InventoryEvent event = events[index];
+          final bool hasNote = event.note?.isNotEmpty ?? false;
           return ListTile(
             leading: CircleAvatar(
               child: Icon(_eventIcon(event.type), size: 20),
@@ -382,15 +389,14 @@ class _InventoryTimeline extends StatelessWidget {
             title: Text(event.type.persianLabel),
             subtitle: Text(
               '${_dateTime(event.effectiveAt)}'
-              '${event.note == null || event.note!.isEmpty ? '' : '\n${event.note}'}',
+              '${hasNote ? '\n${event.note}' : ''}',
             ),
             trailing: Text(
-              '${_number(event.stockUnits)}\n'
-              '${medication.unit.persianLabel}',
+              '${_number(event.stockUnits)}\n${medication.unit.persianLabel}',
               textAlign: TextAlign.center,
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-            isThreeLine: event.note != null && event.note!.isNotEmpty,
+            isThreeLine: hasNote,
           );
         },
       ),
@@ -414,7 +420,7 @@ class _MedicationNotFound extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('دارو پیدا نشد')),
+      appBar: AppBar(title: const Text('جزئیات دارو')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -423,6 +429,13 @@ class _MedicationNotFound extends StatelessWidget {
             children: <Widget>[
               const Icon(Icons.search_off_outlined, size: 64),
               const SizedBox(height: 16),
+              Text(
+                'دارو پیدا نشد',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
               const Text(
                 'این دارو حذف شده یا شناسه آن معتبر نیست.',
                 textAlign: TextAlign.center,
@@ -445,19 +458,7 @@ class _LoadError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const Icon(Icons.error_outline, size: 56),
-            const SizedBox(height: 12),
-            const Text('دریافت اطلاعات دارو با خطا مواجه شد.'),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onRetry, child: const Text('تلاش دوباره')),
-          ],
-        ),
-      ),
+      child: FilledButton(onPressed: onRetry, child: const Text('تلاش دوباره')),
     );
   }
 }
@@ -471,23 +472,17 @@ class _HistoryError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
+        padding: const EdgeInsets.all(20),
+        child: Column(
           children: <Widget>[
-            const Expanded(child: Text('دریافت تاریخچه انجام نشد.')),
+            const Text('نمایش تاریخچه با خطا مواجه شد.'),
+            const SizedBox(height: 12),
             TextButton(onPressed: onRetry, child: const Text('تلاش دوباره')),
           ],
         ),
       ),
     );
   }
-}
-
-String _number(double value) {
-  if (value == value.roundToDouble()) {
-    return value.toInt().toString();
-  }
-  return value.toStringAsFixed(1);
 }
 
 String _date(DateTime value) {
@@ -499,4 +494,11 @@ String _dateTime(DateTime value) {
   return '${_date(value)} • '
       '${value.hour.toString().padLeft(2, '0')}:'
       '${value.minute.toString().padLeft(2, '0')}';
+}
+
+String _number(double value) {
+  if (value == value.roundToDouble()) {
+    return value.toInt().toString();
+  }
+  return value.toStringAsFixed(1);
 }
