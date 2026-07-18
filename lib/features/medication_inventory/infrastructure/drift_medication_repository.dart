@@ -94,9 +94,7 @@ final class DriftMedicationRepository implements MedicationRepository {
   @override
   Future<void> upsert(Medication medication) async {
     final DateTime now = _nowUtc();
-    final DateTime effectiveAt = _normalizeUtc(
-      medication.inventoryRecordedAt,
-    );
+    final DateTime effectiveAt = _normalizeUtc(medication.inventoryRecordedAt);
     if (effectiveAt.isAfter(now)) {
       throw ArgumentError.value(
         medication.inventoryRecordedAt,
@@ -119,9 +117,7 @@ final class DriftMedicationRepository implements MedicationRepository {
         alertLeadDays: Value<int>(medication.alertLeadDays),
         notes: Value<String?>(medication.notes),
         isArchived: Value<bool>(medication.isArchived),
-        createdAt: Value<DateTime>(
-          _normalizeUtc(existing?.createdAt ?? now),
-        ),
+        createdAt: Value<DateTime>(_normalizeUtc(existing?.createdAt ?? now)),
         updatedAt: Value<DateTime>(now),
       );
 
