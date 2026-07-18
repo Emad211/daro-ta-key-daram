@@ -33,16 +33,12 @@ abstract final class StockCalculator {
       final double elapsedDays =
           elapsedMicroseconds / Duration.microsecondsPerDay;
       final double consumedUnits = elapsedDays * medication.unitsPerDay;
-      remainingUnits = math.max(
-        0.0,
-        medication.stockAtRecord - consumedUnits,
-      );
+      remainingUnits = math.max(0.0, medication.stockAtRecord - consumedUnits);
       exactRemainingDays = remainingUnits / medication.unitsPerDay;
     }
 
     final bool isDepleted = depletedByTime || remainingUnits <= 0;
-    final DateTime reorderAt =
-        medication.alertLeadDays >= totalCoverageDays
+    final DateTime reorderAt = medication.alertLeadDays >= totalCoverageDays
         ? baseline
         : depletionAt.subtract(Duration(days: medication.alertLeadDays));
 
@@ -87,9 +83,7 @@ abstract final class StockCalculator {
     final int roundedCoverageMicroseconds = coverageMicroseconds.round();
 
     try {
-      return baseline.add(
-        Duration(microseconds: roundedCoverageMicroseconds),
-      );
+      return baseline.add(Duration(microseconds: roundedCoverageMicroseconds));
     } on ArgumentError {
       throw ArgumentError.value(
         stockAtRecord,
