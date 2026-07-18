@@ -11,7 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final DateTime now = DateTime.utc(2026, 7, 18, 12);
 
-  group('DriftMedicationRepository', () {
+  group('DriftMedicationRepository with an in-memory database', () {
     late AppDatabase database;
     late DriftMedicationRepository repository;
 
@@ -101,35 +101,35 @@ void main() {
       await expectLater(operation, throwsStateError);
       expect(await database.select(database.inventoryEvents).get(), isEmpty);
     });
+  });
 
-    test('data survives closing and reopening a SQLite file', () async {
-      final Directory directory = await Directory.systemTemp.createTemp(
-        'daro-ta-key-daram-',
+  test('data survives closing and reopening a SQLite file', () async {
+    final Directory directory = await Directory.systemTemp.createTemp(
+      'daro-ta-key-daram-',
+    );
+    final File file = File('${directory.path}/repository.sqlite');
+
+    try {
+      final AppDatabase firstDatabase = AppDatabase(NativeDatabase(file));
+      final DriftMedicationRepository firstRepository =
+          DriftMedicationRepository(firstDatabase, clock: () => now);
+      await firstRepository.upsert(_medication(now: now));
+      await firstDatabase.close();
+
+      final AppDatabase secondDatabase = AppDatabase(NativeDatabase(file));
+      final DriftMedicationRepository secondRepository =
+          DriftMedicationRepository(secondDatabase, clock: () => now);
+      final Medication? restored = await secondRepository.findById(
+        'medication-1',
       );
-      final File file = File('${directory.path}/repository.sqlite');
 
-      try {
-        final AppDatabase firstDatabase = AppDatabase(NativeDatabase(file));
-        final DriftMedicationRepository firstRepository =
-            DriftMedicationRepository(firstDatabase, clock: () => now);
-        await firstRepository.upsert(_medication(now: now));
-        await firstDatabase.close();
-
-        final AppDatabase secondDatabase = AppDatabase(NativeDatabase(file));
-        final DriftMedicationRepository secondRepository =
-            DriftMedicationRepository(secondDatabase, clock: () => now);
-        final Medication? restored = await secondRepository.findById(
-          'medication-1',
-        );
-
-        expect(restored, isNotNull);
-        expect(restored?.name, 'متفورمین');
-        expect(restored?.stockAtRecord, 30);
-        await secondDatabase.close();
-      } finally {
-        await directory.delete(recursive: true);
-      }
-    });
+      expect(restored, isNotNull);
+      expect(restored?.name, 'متفورمین');
+      expect(restored?.stockAtRecord, 30);
+      await secondDatabase.close();
+    } finally {
+      await directory.delete(recursive: true);
+    }
   });
 }
 
@@ -141,6 +141,5 @@ Medication _medication({required DateTime now}) {
     stockAtRecord: 30,
     unitsPerDay: 2,
     inventoryRecordedAt: now,
-    alertLeadDays: 5,
   );
 }

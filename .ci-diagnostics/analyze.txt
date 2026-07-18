@@ -1,5 +1,0 @@
-Analyzing daro-ta-key-daram...                                  
-
-   info • The value of the argument is redundant because it matches the default value. Try removing the argument • test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart:144:20 • avoid_redundant_argument_values
-
-1 issue found. (ran in 10.2s)
