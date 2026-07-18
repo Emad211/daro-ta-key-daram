@@ -9,12 +9,7 @@ final class LowStockNotificationPlanner {
     this.minimumLeadTime = const Duration(minutes: 1),
   }) {
     if (preferredLocalHour < 0 || preferredLocalHour > 23) {
-      throw RangeError.range(
-        preferredLocalHour,
-        0,
-        23,
-        'preferredLocalHour',
-      );
+      throw RangeError.range(preferredLocalHour, 0, 23, 'preferredLocalHour');
     }
     if (minimumLeadTime.isNegative) {
       throw ArgumentError.value(
