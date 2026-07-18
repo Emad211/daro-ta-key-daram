@@ -1,0 +1,93 @@
+00:00 +0: loading /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/core/input/localized_number_parser_test.dart
+00:00 +0: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/core/input/localized_number_parser_test.dart: LocalizedNumberParser parses Persian digits and decimal separator
+00:00 +0 -1: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/core/input/localized_number_parser_test.dart: LocalizedNumberParser parses Persian digits and decimal separator [E]
+  Expected: <12.5>
+    Actual: <null>
+  
+  package:matcher                                        expect
+  package:flutter_test/src/widget_tester.dart 473:18     expect
+  test/core/input/localized_number_parser_test.dart 7:7  main.<fn>.<fn>
+  
+00:00 +0 -1: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/core/input/localized_number_parser_test.dart: LocalizedNumberParser parses Arabic digits and comma decimal separator
+00:00 +1 -1: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/core/input/localized_number_parser_test.dart: LocalizedNumberParser removes Persian thousands separator
+00:00 +2 -1: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/core/input/localized_number_parser_test.dart: LocalizedNumberParser returns null for non-numeric input
+lib/features/medication_inventory/presentation/providers/medication_providers.dart:45:7: Error: Type 'FutureProviderFamily' not found.
+final FutureProviderFamily<Medication?, String> medicationByIdProvider =
+      ^^^^^^^^^^^^^^^^^^^^
+lib/features/medication_inventory/presentation/providers/medication_providers.dart:50:7: Error: Type 'StreamProviderFamily' not found.
+final StreamProviderFamily<List<InventoryEvent>, String>
+      ^^^^^^^^^^^^^^^^^^^^
+lib/features/medication_inventory/presentation/providers/medication_providers.dart:45:7: Error: 'FutureProviderFamily' isn't a type.
+final FutureProviderFamily<Medication?, String> medicationByIdProvider =
+      ^^^^^^^^^^^^^^^^^^^^
+lib/features/medication_inventory/presentation/providers/medication_providers.dart:50:7: Error: 'StreamProviderFamily' isn't a type.
+final StreamProviderFamily<List<InventoryEvent>, String>
+      ^^^^^^^^^^^^^^^^^^^^
+00:01 +3 -2: loading /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/widget_test.dart [E]
+  Failed to load "/home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/widget_test.dart":
+  Compilation failed for testPath=/home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/widget_test.dart: lib/features/medication_inventory/presentation/providers/medication_providers.dart:45:7: Error: Type 'FutureProviderFamily' not found.
+  final FutureProviderFamily<Medication?, String> medicationByIdProvider =
+        ^^^^^^^^^^^^^^^^^^^^
+  lib/features/medication_inventory/presentation/providers/medication_providers.dart:50:7: Error: Type 'StreamProviderFamily' not found.
+  final StreamProviderFamily<List<InventoryEvent>, String>
+        ^^^^^^^^^^^^^^^^^^^^
+  lib/features/medication_inventory/presentation/providers/medication_providers.dart:45:7: Error: 'FutureProviderFamily' isn't a type.
+  final FutureProviderFamily<Medication?, String> medicationByIdProvider =
+        ^^^^^^^^^^^^^^^^^^^^
+  lib/features/medication_inventory/presentation/providers/medication_providers.dart:50:7: Error: 'StreamProviderFamily' isn't a type.
+  final StreamProviderFamily<List<InventoryEvent>, String>
+        ^^^^^^^^^^^^^^^^^^^^
+  .
+00:03 +3 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator calculates 15 full days for 30 tablets at 2 per day
+00:03 +4 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator decreases estimated stock as time passes
+00:03 +5 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator never returns negative remaining stock
+00:03 +6 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator supports fractional daily use
+00:03 +7 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator does not consume stock when device time is before record time
+00:03 +8 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator rejects zero daily use
+00:03 +9 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/inventory_history_test.dart: Drift history returns domain events newest first
+00:04 +10 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: DriftMedicationRepository with an in-memory database creates a medication with one initial inventory event
+00:04 +11 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: DriftMedicationRepository with an in-memory database uses the newest inventory event as calculation baseline
+00:04 +12 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: DriftMedicationRepository with an in-memory database repeated unchanged upsert does not duplicate its baseline
+00:04 +13 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: DriftMedicationRepository with an in-memory database rejects an inventory event effective in the future
+00:04 +14 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: DriftMedicationRepository with an in-memory database archive hides a medication and restore makes it active
+00:04 +15 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: DriftMedicationRepository with an in-memory database permanent deletion cascades to inventory history
+00:04 +16 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: DriftMedicationRepository with an in-memory database rejects an inventory event for a missing medication
+00:04 +17 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: data survives closing and reopening a SQLite file
+lib/features/medication_inventory/presentation/providers/medication_providers.dart:45:7: Error: Type 'FutureProviderFamily' not found.
+final FutureProviderFamily<Medication?, String> medicationByIdProvider =
+      ^^^^^^^^^^^^^^^^^^^^
+lib/features/medication_inventory/presentation/providers/medication_providers.dart:50:7: Error: Type 'StreamProviderFamily' not found.
+final StreamProviderFamily<List<InventoryEvent>, String>
+      ^^^^^^^^^^^^^^^^^^^^
+00:04 +18 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/application/inventory_event_service_test.dart: records a restock through the application service
+lib/features/medication_inventory/presentation/providers/medication_providers.dart:45:7: Error: 'FutureProviderFamily' isn't a type.
+final FutureProviderFamily<Medication?, String> medicationByIdProvider =
+      ^^^^^^^^^^^^^^^^^^^^
+lib/features/medication_inventory/presentation/providers/medication_providers.dart:50:7: Error: 'StreamProviderFamily' isn't a type.
+final StreamProviderFamily<List<InventoryEvent>, String>
+      ^^^^^^^^^^^^^^^^^^^^
+00:04 +19 -2: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/application/inventory_event_service_test.dart: rejects manual creation of an initial event
+00:04 +20 -3: loading /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/presentation/medication_lifecycle_widget_test.dart [E]
+  Failed to load "/home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/presentation/medication_lifecycle_widget_test.dart":
+  Compilation failed for testPath=/home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/presentation/medication_lifecycle_widget_test.dart: lib/features/medication_inventory/presentation/providers/medication_providers.dart:45:7: Error: Type 'FutureProviderFamily' not found.
+  final FutureProviderFamily<Medication?, String> medicationByIdProvider =
+        ^^^^^^^^^^^^^^^^^^^^
+  lib/features/medication_inventory/presentation/providers/medication_providers.dart:50:7: Error: Type 'StreamProviderFamily' not found.
+  final StreamProviderFamily<List<InventoryEvent>, String>
+        ^^^^^^^^^^^^^^^^^^^^
+  lib/features/medication_inventory/presentation/providers/medication_providers.dart:45:7: Error: 'FutureProviderFamily' isn't a type.
+  final FutureProviderFamily<Medication?, String> medicationByIdProvider =
+        ^^^^^^^^^^^^^^^^^^^^
+  lib/features/medication_inventory/presentation/providers/medication_providers.dart:50:7: Error: 'StreamProviderFamily' isn't a type.
+  final StreamProviderFamily<List<InventoryEvent>, String>
+        ^^^^^^^^^^^^^^^^^^^^
+  .
+00:06 +20 -3: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/ads/domain/ad_policy_test.dart: AdPolicy blocks ads in critical health context
+00:06 +21 -3: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/ads/domain/ad_policy_test.dart: AdPolicy allows ad when all frequency rules are satisfied
+00:06 +22 -3: /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/ads/domain/ad_policy_test.dart: AdPolicy blocks ad when daily cap is reached
+00:06 +23 -3: Some tests failed.
+
+Failing tests:
+  /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/core/input/localized_number_parser_test.dart: LocalizedNumberParser parses Persian digits and decimal separator
+  /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/presentation/medication_lifecycle_widget_test.dart: loading /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/presentation/medication_lifecycle_widget_test.dart
+  /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/widget_test.dart: loading /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/widget_test.dart
