@@ -3,6 +3,7 @@ name: Export formatted sources
 on:
   push:
     branches: [agent/medication-edit-archive-management]
+  workflow_dispatch:
 
 permissions:
   contents: read
