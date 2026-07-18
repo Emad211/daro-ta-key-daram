@@ -6,6 +6,7 @@ import 'package:daro_ta_key_daram/features/medication_inventory/infrastructure/i
 import 'package:daro_ta_key_daram/features/medication_inventory/presentation/providers/medication_providers.dart';
 import 'package:daro_ta_key_daram/features/notifications/application/local_notification_service.dart';
 import 'package:daro_ta_key_daram/features/notifications/infrastructure/noop_local_notification_service.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -50,10 +51,7 @@ void main() {
       find.byKey(const Key('edit-medication-alert-days')),
       '۷',
     );
-    await tester.enterText(
-      find.byKey(const Key('edit-medication-notes')),
-      '',
-    );
+    await tester.enterText(find.byKey(const Key('edit-medication-notes')), '');
     await tester.tap(find.byKey(const Key('save-medication-metadata')));
     await tester.pumpAndSettle();
 
