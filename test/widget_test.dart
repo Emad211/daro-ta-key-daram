@@ -9,7 +9,7 @@ void main() {
   testWidgets('renders Persian app title', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: <Override>[
+        overrides: [
           medicationRepositoryProvider.overrideWithValue(
             InMemoryMedicationRepository.withDemoData(),
           ),

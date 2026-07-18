@@ -1,5 +1,0 @@
-Analyzing daro-ta-key-daram...                                  
-
-  error • The name 'Override' isn't a type, so it can't be used as a type argument. Try correcting the name to an existing type, or defining a type named 'Override' • test/widget_test.dart:12:21 • non_type_as_type_argument
-
-1 issue found. (ran in 9.7s)
