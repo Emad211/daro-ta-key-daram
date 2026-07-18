@@ -52,7 +52,7 @@ void main() {
     );
   });
 
-  test('notification failures are non-blocking and reported as false', () async {
+  test('schedule failures are non-blocking and reported as false', () async {
     final InMemoryMedicationRepository repository =
         InMemoryMedicationRepository(seed: <Medication>[_medication(now)]);
     final NotificationSyncCoordinator coordinator = NotificationSyncCoordinator(
@@ -62,6 +62,19 @@ void main() {
     );
 
     expect(await coordinator.rescheduleMedication('medication-1'), isFalse);
+  });
+
+  test('cancel failures are non-blocking and reported as false', () async {
+    final Medication archived = _medication(now).copyWith(isArchived: true);
+    final InMemoryMedicationRepository repository =
+        InMemoryMedicationRepository(seed: <Medication>[archived]);
+    final NotificationSyncCoordinator coordinator = NotificationSyncCoordinator(
+      medicationRepository: repository,
+      notificationService: _ThrowingNotificationService(),
+      clock: () => now,
+    );
+
+    expect(await coordinator.rescheduleMedication(archived.id), isFalse);
   });
 }
 

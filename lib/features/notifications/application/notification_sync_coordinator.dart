@@ -27,8 +27,7 @@ final class NotificationSyncCoordinator {
         medicationId,
       );
       if (medication == null || medication.isArchived) {
-        await cancelMedication(medicationId);
-        return true;
+        return cancelMedication(medicationId);
       }
 
       final NotificationPlan? plan = _planner.plan(
@@ -36,10 +35,10 @@ final class NotificationSyncCoordinator {
         now: _clock(),
       );
       if (plan == null) {
-        await cancelMedication(medicationId);
-      } else {
-        await _notificationService.schedule(plan);
+        return cancelMedication(medicationId);
       }
+
+      await _notificationService.schedule(plan);
       return true;
     } on Object {
       return false;
