@@ -153,10 +153,7 @@ void main() {
         alertLeadDays: 7,
       );
 
-      expect(
-        medication.stockAt(recordedAt).urgency,
-        MedicationUrgency.safe,
-      );
+      expect(medication.stockAt(recordedAt).urgency, MedicationUrgency.safe);
       expect(
         medication.stockAt(recordedAt.add(const Duration(days: 3))).urgency,
         MedicationUrgency.warning,
@@ -224,10 +221,7 @@ void main() {
           snapshot.exactRemainingDays,
           lessThanOrEqualTo(previousDays + 1e-10),
         );
-        expect(
-          snapshot.fullRemainingDays,
-          snapshot.exactRemainingDays.floor(),
-        );
+        expect(snapshot.fullRemainingDays, snapshot.exactRemainingDays.floor());
         expect(snapshot.reorderAt.isBefore(recordedAt), isFalse);
         expect(snapshot.reorderAt.isAfter(snapshot.depletionAt), isFalse);
 
