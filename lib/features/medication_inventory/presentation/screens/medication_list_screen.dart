@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/widgets/empty_state.dart';
 import '../../../ads/presentation/ad_banner_slot.dart';
+import '../../../notifications/application/local_notification_service.dart';
 import '../../domain/medication.dart';
 import '../providers/medication_providers.dart';
 import '../widgets/medication_card.dart';
@@ -30,6 +31,13 @@ class MedicationListScreen extends ConsumerWidget {
             ),
           ],
         ),
+        actions: <Widget>[
+          IconButton(
+            tooltip: 'فعال‌کردن یادآوری موجودی',
+            onPressed: () => _requestNotificationPermission(context, ref),
+            icon: const Icon(Icons.notifications_active_outlined),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/add'),
@@ -108,6 +116,46 @@ class MedicationListScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
+      ),
+    );
+  }
+
+  Future<void> _requestNotificationPermission(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final LocalNotificationService service = ref.read(
+      localNotificationServiceProvider,
+    );
+    final NotificationPermissionState state = await service
+        .requestPermission();
+    if (!context.mounted) {
+      return;
+    }
+
+    if (state == NotificationPermissionState.granted) {
+      final int scheduled = await ref
+          .read(notificationSyncCoordinatorProvider)
+          .rebuildAll();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              scheduled == 0
+                  ? 'یادآوری فعال شد؛ داروی فعالی برای زمان‌بندی وجود ندارد.'
+                  : 'یادآوری برای $scheduled دارو فعال شد.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'مجوز اعلان فعال نشد؛ همه امکانات مدیریت دارو همچنان قابل استفاده‌اند.',
+        ),
       ),
     );
   }
