@@ -59,9 +59,7 @@ class _MedicationDetailsScaffold extends ConsumerWidget {
             tooltip: 'ویرایش مشخصات',
             onPressed: () => context.goNamed(
               'edit-medication',
-              pathParameters: <String, String>{
-                'medicationId': medication.id,
-              },
+              pathParameters: <String, String>{'medicationId': medication.id},
             ),
             icon: const Icon(Icons.edit_outlined),
           ),
@@ -385,7 +383,9 @@ class _InventoryTimeline extends StatelessWidget {
           final InventoryEvent event = events[index];
           final bool hasNote = event.note?.isNotEmpty ?? false;
           return ListTile(
-            leading: CircleAvatar(child: Icon(_eventIcon(event.type), size: 20)),
+            leading: CircleAvatar(
+              child: Icon(_eventIcon(event.type), size: 20),
+            ),
             title: Text(event.type.persianLabel),
             subtitle: Text(
               '${_dateTime(event.effectiveAt)}'
