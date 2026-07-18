@@ -57,6 +57,16 @@ final class DriftMedicationRepository implements MedicationRepository {
 
   @override
   Future<void> recordInventoryEvent(InventoryEvent event) async {
+    final DateTime now = _nowUtc();
+    final DateTime effectiveAt = _normalizeUtc(event.effectiveAt);
+    if (effectiveAt.isAfter(now)) {
+      throw ArgumentError.value(
+        event.effectiveAt,
+        'event.effectiveAt',
+        'Inventory events cannot become effective in the future.',
+      );
+    }
+
     await _database.transaction(() async {
       final MedicationRow? medication =
           await (_database.select(_database.medications)..where(
@@ -69,12 +79,10 @@ final class DriftMedicationRepository implements MedicationRepository {
         );
       }
 
-      await _insertInventoryEvent(event);
+      await _insertInventoryEvent(event, effectiveAt: effectiveAt);
       await (_database.update(_database.medications)
             ..where((Medications table) => table.id.equals(event.medicationId)))
-          .write(
-            MedicationsCompanion(updatedAt: Value<DateTime>(_clock().toUtc())),
-          );
+          .write(MedicationsCompanion(updatedAt: Value<DateTime>(now)));
     });
   }
 
@@ -85,12 +93,23 @@ final class DriftMedicationRepository implements MedicationRepository {
 
   @override
   Future<void> upsert(Medication medication) async {
+    final DateTime now = _nowUtc();
+    final DateTime effectiveAt = _normalizeUtc(
+      medication.inventoryRecordedAt,
+    );
+    if (effectiveAt.isAfter(now)) {
+      throw ArgumentError.value(
+        medication.inventoryRecordedAt,
+        'medication.inventoryRecordedAt',
+        'Inventory baselines cannot become effective in the future.',
+      );
+    }
+
     await _database.transaction(() async {
       final MedicationRow? existing =
           await (_database.select(_database.medications)
                 ..where((Medications table) => table.id.equals(medication.id)))
               .getSingleOrNull();
-      final DateTime now = _clock().toUtc();
 
       final MedicationsCompanion companion = MedicationsCompanion(
         id: Value<String>(medication.id),
@@ -100,7 +119,9 @@ final class DriftMedicationRepository implements MedicationRepository {
         alertLeadDays: Value<int>(medication.alertLeadDays),
         notes: Value<String?>(medication.notes),
         isArchived: Value<bool>(medication.isArchived),
-        createdAt: Value<DateTime>(existing?.createdAt ?? now),
+        createdAt: Value<DateTime>(
+          _normalizeUtc(existing?.createdAt ?? now),
+        ),
         updatedAt: Value<DateTime>(now),
       );
 
@@ -115,11 +136,10 @@ final class DriftMedicationRepository implements MedicationRepository {
       final InventoryEventRow? latest = await _latestInventoryEvent(
         medication.id,
       );
-      final DateTime effectiveAt = medication.inventoryRecordedAt.toUtc();
       final bool baselineChanged =
           latest == null ||
           latest.stockUnits != medication.stockAtRecord ||
-          latest.effectiveAt != effectiveAt;
+          _normalizeUtc(latest.effectiveAt) != effectiveAt;
 
       if (baselineChanged) {
         await _insertInventoryEvent(
@@ -133,6 +153,7 @@ final class DriftMedicationRepository implements MedicationRepository {
             effectiveAt: effectiveAt,
             createdAt: now,
           ),
+          effectiveAt: effectiveAt,
         );
       }
     });
@@ -160,7 +181,10 @@ final class DriftMedicationRepository implements MedicationRepository {
     return query.watch().map(_latestMedicationRows);
   }
 
-  Future<void> _insertInventoryEvent(InventoryEvent event) {
+  Future<void> _insertInventoryEvent(
+    InventoryEvent event, {
+    DateTime? effectiveAt,
+  }) {
     return _database
         .into(_database.inventoryEvents)
         .insert(
@@ -169,8 +193,10 @@ final class DriftMedicationRepository implements MedicationRepository {
             medicationId: Value<String>(event.medicationId),
             eventType: Value<String>(event.type.name),
             stockUnits: Value<double>(event.stockUnits),
-            effectiveAt: Value<DateTime>(event.effectiveAt.toUtc()),
-            createdAt: Value<DateTime>(event.createdAt.toUtc()),
+            effectiveAt: Value<DateTime>(
+              effectiveAt ?? _normalizeUtc(event.effectiveAt),
+            ),
+            createdAt: Value<DateTime>(_normalizeUtc(event.createdAt)),
             note: Value<String?>(event.note),
           ),
         );
@@ -212,6 +238,15 @@ final class DriftMedicationRepository implements MedicationRepository {
     return List<Medication>.unmodifiable(medicationsById.values);
   }
 
+  DateTime _normalizeUtc(DateTime value) {
+    return DateTime.fromMillisecondsSinceEpoch(
+      value.toUtc().millisecondsSinceEpoch,
+      isUtc: true,
+    );
+  }
+
+  DateTime _nowUtc() => _normalizeUtc(_clock());
+
   Future<void> _setArchiveState({
     required String medicationId,
     required bool isArchived,
@@ -222,7 +257,7 @@ final class DriftMedicationRepository implements MedicationRepository {
         )..where((Medications table) => table.id.equals(medicationId))).write(
           MedicationsCompanion(
             isArchived: Value<bool>(isArchived),
-            updatedAt: Value<DateTime>(_clock().toUtc()),
+            updatedAt: Value<DateTime>(_nowUtc()),
           ),
         );
     if (affected == 0) {
