@@ -4,6 +4,8 @@ import '../domain/medication.dart';
 abstract interface class MedicationRepository {
   Stream<List<Medication>> watchActiveMedications();
 
+  Stream<List<InventoryEvent>> watchInventoryEvents(String medicationId);
+
   Future<Medication?> findById(String medicationId);
 
   Future<void> upsert(Medication medication);
