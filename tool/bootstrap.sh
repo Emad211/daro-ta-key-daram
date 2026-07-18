@@ -8,6 +8,7 @@ fi
 
 if [[ ! -d android ]]; then
   flutter create \
+    --no-pub \
     --platforms=android \
     --org ir.emadkarimi \
     --project-name daro_ta_key_daram \
