@@ -23,8 +23,8 @@ void main() {
           ],
         );
     final InventoryEventService service = InventoryEventService(
-      repository: repository,
-      clock: () => restockTime,
+      repository,
+      () => restockTime,
     );
 
     await service.record(
@@ -51,8 +51,8 @@ void main() {
     final InMemoryMedicationRepository repository =
         InMemoryMedicationRepository();
     final InventoryEventService service = InventoryEventService(
-      repository: repository,
-      clock: DateTime.now,
+      repository,
+      DateTime.now,
     );
 
     await expectLater(

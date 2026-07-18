@@ -6,6 +6,7 @@ abstract final class LocalizedNumberParser {
     String normalized = (value ?? '')
         .trim()
         .replaceAll('٬', '')
+        .replaceAll('٫', '.')
         .replaceAll('،', '.')
         .replaceAll(',', '.');
 

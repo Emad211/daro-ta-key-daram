@@ -4,13 +4,11 @@ import '../domain/inventory_event.dart';
 import 'medication_repository.dart';
 
 final class InventoryEventService {
-  InventoryEventService({
-    required MedicationRepository repository,
-    required DateTime Function() clock,
+  InventoryEventService(
+    this._repository,
+    this._clock, {
     Uuid? uuid,
-  }) : _repository = repository,
-       _clock = clock,
-       _uuid = uuid ?? Uuid();
+  }) : _uuid = uuid ?? Uuid();
 
   final MedicationRepository _repository;
   final DateTime Function() _clock;
