@@ -1,4 +1,4 @@
-package ir.emadkarimi.daro_ta_key_daram
+package ir.emadkarimi.darutakey
 
 import io.flutter.embedding.android.FlutterActivity
 
