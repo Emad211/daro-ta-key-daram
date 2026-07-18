@@ -30,9 +30,8 @@ class EditMedicationScreen extends ConsumerWidget {
         appBar: AppBar(title: const Text('ویرایش مشخصات دارو')),
         body: Center(
           child: FilledButton(
-            onPressed: () => ref.invalidate(
-              medicationByIdProvider(medicationId),
-            ),
+            onPressed: () =>
+                ref.invalidate(medicationByIdProvider(medicationId)),
             child: const Text('تلاش دوباره'),
           ),
         ),
