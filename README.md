@@ -6,24 +6,30 @@
 
 ## وضعیت پروژه
 
-**مرحله فعلی: Phase 2 — زیرساخت persistence محلی**
+**مرحله فعلی: Phase 2 — persistence محلی و lifecycle دارو**
 
 موارد پیاده‌سازی‌شده:
 
 - تعریف مسئله، دامنه و الزامات MVP
 - معماری Feature-first با تفکیک Domain / Application / Infrastructure / Presentation
 - موتور محاسبه موجودی و تاریخ تقریبی اتمام دارو
-- داشبورد اولیه فارسی و راست‌به‌چپ
+- داشبورد فارسی و راست‌به‌چپ
 - فرم افزودن دارو با اعتبارسنجی
 - دیتابیس محلی Drift/SQLite با schema نسخه ۱
 - تاریخچه رویدادهای موجودی برای initial، restock و correction
 - repository واقعی با transaction، archive/restore و حذف cascade
 - snapshot نسخه‌بندی‌شده schema برای migrationهای آینده
+- صفحه جزئیات دارو و نمایش وضعیت موجودی
+- جریان ثبت خرید مجدد و اصلاح موجودی
+- timeline تاریخچه موجودی با domain objectهای مستقل از Drift
+- عملیات آرشیو با حفظ کامل تاریخچه
+- parser اعداد فارسی و عربی
+- صفحه بازیابی‌پذیر برای شناسه داروی نامعتبر
 - لایه انتزاعی تبلیغات و سیاست نمایش تبلیغ
 - CI برای تولید کد، تطبیق schema، format، analyze و test
-- تست‌های دامنه، تبلیغات، UI و lifecycle دیتابیس فایل واقعی
+- تست‌های دامنه، تبلیغات، persistence، command service و widget flow
 
-قابلیت‌های UI برای ویرایش دارو، ثبت خرید مجدد و مدیریت آرشیو هنوز در مرحله بعدی هستند.
+صفحه ویرایش مشخصات دارو و صفحه مدیریت/بازیابی داروهای آرشیوشده هنوز در increment بعدی هستند.
 
 ## مدل کسب‌وکار
 
@@ -84,26 +90,28 @@ lib/
   app/                       # composition root، theme و router
   core/
     database/                # Drift database و schema
+    input/                   # ورودی‌های بومی‌سازی‌شده
     theme/
     widgets/
   features/
     ads/                     # قرارداد و سیاست تبلیغات
     medication_inventory/
       domain/
-      application/
+      application/           # command serviceها و قرارداد repository
       infrastructure/        # Drift repository
-      presentation/
+      presentation/          # dashboard، details و lifecycle forms
 drift_schemas/               # snapshotهای versioned دیتابیس
 ```
 
 ## قواعد محصول
 
 1. هیچ داده دارویی در MVP به سرور ارسال نمی‌شود.
-2. هیچ تبلیغی روی فرم ورود اطلاعات، هشدار بحرانی یا onboarding نمایش داده نمی‌شود.
+2. هیچ تبلیغی روی فرم ورود اطلاعات، هشدار بحرانی یا lifecycle دارو نمایش داده نمی‌شود.
 3. اپ فقط تخمین موجودی انجام می‌دهد؛ دوز مصرف را پیشنهاد یا تغییر نمی‌دهد.
 4. قابلیت‌های اصلی پشت تبلیغ جایزه‌ای قفل نمی‌شوند.
 5. محاسبات دامنه و transactionهای persistence باید تست خودکار داشته باشند.
 6. تغییر schema بدون snapshot و migration معتبر وارد `main` نمی‌شود.
+7. خرید مجدد به‌عنوان «موجودی کل جدید» ثبت می‌شود، نه مقدار افزوده‌شده مبهم.
 
 ## اسناد مهندسی
 

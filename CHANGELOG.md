@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.0-dev.3 — 2026-07-18
+
+### Added
+
+- Medication details route and tappable dashboard cards
+- Current stock, depletion estimate, recorded daily consumption, alert lead time, and notes display
+- Restock and stock-correction bottom-sheet flows
+- Inventory timeline backed by immutable domain events
+- Archive confirmation preserving medication history
+- Recoverable medication-not-found state
+- Persian and Arabic numeric input parser
+- Inventory event application service
+- Tests for localized parsing, command creation, Drift history ordering, and widget lifecycle flows
+
+### Changed
+
+- Repository contract now exposes a reactive inventory-history stream
+- In-memory test repository now mirrors initial, restock, correction, archive, and delete behavior
+- Purchase flow records the total stock after purchase rather than an ambiguous added quantity
+
 ## 0.1.0-dev.2 — 2026-07-18
 
 ### Added

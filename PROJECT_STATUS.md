@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 2: Local persistence foundation completed; medication lifecycle UI is next.
+Phase 2: Local persistence and the core medication lifecycle UI are completed.
 
 ## Completed
 
@@ -20,19 +20,22 @@ Phase 2: Local persistence foundation completed; medication lifecycle UI is next
 - [x] Initial, restock, and correction inventory events
 - [x] Archive, restore, and cascade deletion at repository level
 - [x] Persistence across database close and reopen
+- [x] Medication details and inventory timeline
+- [x] User-facing restock and correction flows
+- [x] Archive confirmation with history preservation
+- [x] Persian and Arabic numeric input parsing
 - [x] CI code generation, schema diff, format, analyze, and tests
-- [x] Automated domain, advertising, widget, and persistence tests
+- [x] Automated domain, advertising, persistence, application, and widget tests
 
 ## Next engineering increment
 
-1. Add medication details and edit screen.
-2. Add user-facing restock/correction flow and history timeline.
-3. Add archive/restore management screen.
-4. Add local notifications for low-stock alerts.
-5. Generate and commit the Android platform project before release signing.
-6. Integrate Adivery behind the existing `AdService` contract.
-7. Add analytics events that contain no medication names or health data.
-8. Produce a signed internal APK for device testing.
+1. Add medication metadata edit screen without creating inventory events unless the stock baseline changes.
+2. Add archived-medication management and restore UI.
+3. Add local notifications for low-stock alerts.
+4. Generate and commit the Android platform project before release signing.
+5. Integrate Adivery behind the existing `AdService` contract.
+6. Add analytics events that contain no medication names or health data.
+7. Produce a signed internal APK for device testing.
 
 ## Repository
 
