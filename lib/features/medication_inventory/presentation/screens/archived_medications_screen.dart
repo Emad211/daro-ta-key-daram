@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/widgets/empty_state.dart';
-import '../../application/medication_repository.dart';
 import '../../domain/medication.dart';
 import '../providers/medication_providers.dart';
 
@@ -130,9 +129,9 @@ class ArchivedMedicationsScreen extends ConsumerWidget {
       }
     } on Object {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('حذف دائمی انجام نشد.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('حذف دائمی انجام نشد.')));
       }
     }
   }
