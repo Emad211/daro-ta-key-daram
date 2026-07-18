@@ -215,9 +215,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
         name: _nameController.text,
         unit: _selectedUnit,
         stockAtRecord: double.parse(_normalizeNumber(_stockController.text)),
-        unitsPerDay: double.parse(
-          _normalizeNumber(_dailyUseController.text),
-        ),
+        unitsPerDay: double.parse(_normalizeNumber(_dailyUseController.text)),
         inventoryRecordedAt: now,
         alertLeadDays: int.parse(_normalizeNumber(_alertDaysController.text)),
         notes: _notesController.text,
@@ -231,9 +229,9 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
 
       if (mounted) {
         context.go('/');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('دارو با موفقیت ثبت شد.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('دارو با موفقیت ثبت شد.')));
       }
     } on Object {
       if (mounted) {

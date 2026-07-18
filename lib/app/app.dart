@@ -13,10 +13,7 @@ class DaroTaKeyApp extends StatelessWidget {
       title: 'دارو تا کی دارم؟',
       debugShowCheckedModeBanner: false,
       locale: const Locale('fa'),
-      supportedLocales: const <Locale>[
-        Locale('fa'),
-        Locale('en'),
-      ],
+      supportedLocales: const <Locale>[Locale('fa'), Locale('en')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: AppTheme.light,
       routerConfig: appRouter,

@@ -5,9 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('renders Persian app title', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: DaroTaKeyApp()),
-    );
+    await tester.pumpWidget(const ProviderScope(child: DaroTaKeyApp()));
     await tester.pumpAndSettle();
 
     expect(find.text('دارو تا کی دارم؟'), findsOneWidget);

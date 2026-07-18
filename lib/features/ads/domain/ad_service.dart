@@ -1,7 +1,4 @@
-enum AdPlacement {
-  medicationDashboardBanner,
-  inventoryUpdateInterstitial,
-}
+enum AdPlacement { medicationDashboardBanner, inventoryUpdateInterstitial }
 
 abstract interface class AdService {
   Future<void> initialize();

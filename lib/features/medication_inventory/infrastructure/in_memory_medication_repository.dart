@@ -6,9 +6,7 @@ import '../domain/medication_unit.dart';
 
 class InMemoryMedicationRepository implements MedicationRepository {
   InMemoryMedicationRepository({List<Medication>? seed})
-      : _items = <Medication>[
-          ...?seed,
-        ];
+    : _items = <Medication>[...?seed];
 
   factory InMemoryMedicationRepository.withDemoData() {
     final DateTime now = DateTime.now();
@@ -21,7 +19,6 @@ class InMemoryMedicationRepository implements MedicationRepository {
           stockAtRecord: 30,
           unitsPerDay: 2,
           inventoryRecordedAt: now,
-          alertLeadDays: 5,
         ),
         Medication(
           id: 'demo-vitamin-d',

@@ -50,19 +50,16 @@ class MedicationCard extends StatelessWidget {
                     children: <Widget>[
                       Text(
                         medication.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${_displayNumber(snapshot.estimatedRemainingUnits)} '
                         '${medication.unit.persianLabel} باقی‌مانده',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -79,9 +76,9 @@ class MedicationCard extends StatelessWidget {
                   child: Text(
                     snapshot.urgency.persianLabel,
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: urgencyStyle.foreground,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      color: urgencyStyle.foreground,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -138,15 +135,15 @@ class _Metric extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 3),
         Text(
           value,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
         ),
       ],
     );
@@ -156,30 +153,27 @@ class _Metric extends StatelessWidget {
 class _UrgencyStyle {
   const _UrgencyStyle({required this.background, required this.foreground});
 
-  final Color background;
-  final Color foreground;
-
-  factory _UrgencyStyle.from(
-    BuildContext context,
-    MedicationUrgency urgency,
-  ) {
+  factory _UrgencyStyle.from(BuildContext context, MedicationUrgency urgency) {
     return switch (urgency) {
       MedicationUrgency.safe => const _UrgencyStyle(
-          background: Color(0xFFE5F5EF),
-          foreground: Color(0xFF12634F),
-        ),
+        background: Color(0xFFE5F5EF),
+        foreground: Color(0xFF12634F),
+      ),
       MedicationUrgency.warning => const _UrgencyStyle(
-          background: Color(0xFFFFF3D6),
-          foreground: Color(0xFF855A00),
-        ),
+        background: Color(0xFFFFF3D6),
+        foreground: Color(0xFF855A00),
+      ),
       MedicationUrgency.critical => const _UrgencyStyle(
-          background: Color(0xFFFFE8E4),
-          foreground: Color(0xFFA33A2B),
-        ),
+        background: Color(0xFFFFE8E4),
+        foreground: Color(0xFFA33A2B),
+      ),
       MedicationUrgency.depleted => const _UrgencyStyle(
-          background: Color(0xFFF1E8F8),
-          foreground: Color(0xFF6B368D),
-        ),
+        background: Color(0xFFF1E8F8),
+        foreground: Color(0xFF6B368D),
+      ),
     };
   }
+
+  final Color background;
+  final Color foreground;
 }

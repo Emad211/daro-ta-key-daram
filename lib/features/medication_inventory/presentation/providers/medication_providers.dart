@@ -9,13 +9,13 @@ final Provider<DateTime Function()> clockProvider =
 
 final Provider<MedicationRepository> medicationRepositoryProvider =
     Provider<MedicationRepository>((Ref ref) {
-  return InMemoryMedicationRepository.withDemoData();
-});
+      return InMemoryMedicationRepository.withDemoData();
+    });
 
 final StreamProvider<List<Medication>> activeMedicationsProvider =
     StreamProvider<List<Medication>>((Ref ref) {
-  final MedicationRepository repository = ref.watch(
-    medicationRepositoryProvider,
-  );
-  return repository.watchActiveMedications();
-});
+      final MedicationRepository repository = ref.watch(
+        medicationRepositoryProvider,
+      );
+      return repository.watchActiveMedications();
+    });

@@ -13,10 +13,10 @@ class Medication {
     this.alertLeadDays = 5,
     String? notes,
     this.isArchived = false,
-  })  : name = name.trim(),
-        stockAtRecord = stockAtRecord,
-        unitsPerDay = unitsPerDay,
-        notes = notes?.trim() {
+  }) : name = name.trim(),
+       stockAtRecord = stockAtRecord,
+       unitsPerDay = unitsPerDay,
+       notes = notes?.trim() {
     if (id.trim().isEmpty) {
       throw ArgumentError.value(id, 'id', 'شناسه دارو نمی‌تواند خالی باشد.');
     }

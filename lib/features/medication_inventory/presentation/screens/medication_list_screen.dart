@@ -49,7 +49,8 @@ class MedicationListScreen extends ConsumerWidget {
           if (sorted.isEmpty) {
             return EmptyState(
               title: 'هنوز دارویی ثبت نشده',
-              message: 'موجودی و مصرف روزانه دارو را وارد کن تا برنامه '
+              message:
+                  'موجودی و مصرف روزانه دارو را وارد کن تا برنامه '
                   'زمان تقریبی اتمام آن را حساب کند.',
               actionLabel: 'ثبت اولین دارو',
               onAction: () => context.go('/add'),
@@ -70,10 +71,7 @@ class MedicationListScreen extends ConsumerWidget {
                 ...sorted.map(
                   (Medication medication) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: MedicationCard(
-                      medication: medication,
-                      now: now,
-                    ),
+                    child: MedicationCard(medication: medication, now: now),
                   ),
                 ),
               ],
@@ -92,9 +90,7 @@ class MedicationListScreen extends ConsumerWidget {
                   const Text('نمایش اطلاعات با خطا مواجه شد.'),
                   const SizedBox(height: 12),
                   FilledButton(
-                    onPressed: () => ref.invalidate(
-                      activeMedicationsProvider,
-                    ),
+                    onPressed: () => ref.invalidate(activeMedicationsProvider),
                     child: const Text('تلاش دوباره'),
                   ),
                 ],
@@ -177,15 +173,15 @@ class _SummaryMetric extends StatelessWidget {
           children: <Widget>[
             Text(
               value,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
             ),
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
