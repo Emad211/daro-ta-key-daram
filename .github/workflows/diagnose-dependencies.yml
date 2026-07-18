@@ -1,0 +1,55 @@
+name: Diagnose dependencies
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Generate platform without resolving packages
+        run: |
+          if [ ! -d android ]; then
+            flutter create \
+              --no-pub \
+              --platforms=android \
+              --org ir.emadkarimi \
+              --project-name daro_ta_key_daram \
+              .
+          fi
+
+      - name: Capture dependency solver output
+        run: |
+          mkdir -p .ci-diagnostics
+          set +e
+          flutter pub get > .ci-diagnostics/pub-get.txt 2>&1
+          echo $? > .ci-diagnostics/pub-get-exit-code.txt
+          exit 0
+
+      - name: Commit diagnostics
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .ci-diagnostics
+          git commit -m "ci: capture dependency diagnostics"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
