@@ -1,0 +1,330 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../core/input/localized_number_parser.dart';
+import '../../application/medication_repository.dart';
+import '../../domain/medication.dart';
+import '../../domain/medication_unit.dart';
+import '../providers/medication_providers.dart';
+
+class EditMedicationScreen extends ConsumerWidget {
+  const EditMedicationScreen({required this.medicationId, super.key});
+
+  final String medicationId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<Medication?> medication = ref.watch(
+      medicationByIdProvider(medicationId),
+    );
+
+    return medication.when(
+      data: (Medication? value) {
+        if (value == null) {
+          return _NotFound(onBack: () => context.go('/'));
+        }
+        return _EditMedicationForm(medication: value);
+      },
+      error: (Object error, StackTrace stackTrace) => Scaffold(
+        appBar: AppBar(title: const Text('ویرایش مشخصات دارو')),
+        body: Center(
+          child: FilledButton(
+            onPressed: () => ref.invalidate(
+              medicationByIdProvider(medicationId),
+            ),
+            child: const Text('تلاش دوباره'),
+          ),
+        ),
+      ),
+      loading: () => Scaffold(
+        appBar: AppBar(title: const Text('ویرایش مشخصات دارو')),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+    );
+  }
+}
+
+class _EditMedicationForm extends ConsumerStatefulWidget {
+  const _EditMedicationForm({required this.medication});
+
+  final Medication medication;
+
+  @override
+  ConsumerState<_EditMedicationForm> createState() =>
+      _EditMedicationFormState();
+}
+
+class _EditMedicationFormState extends ConsumerState<_EditMedicationForm> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _dailyUseController;
+  late final TextEditingController _alertDaysController;
+  late final TextEditingController _notesController;
+  late MedicationUnit _selectedUnit;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.medication.name);
+    _dailyUseController = TextEditingController(
+      text: _number(widget.medication.unitsPerDay),
+    );
+    _alertDaysController = TextEditingController(
+      text: '${widget.medication.alertLeadDays}',
+    );
+    _notesController = TextEditingController(text: widget.medication.notes);
+    _selectedUnit = widget.medication.unit;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _dailyUseController.dispose();
+    _alertDaysController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('ویرایش مشخصات دارو')),
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: <Widget>[
+              const _SafetyNotice(),
+              const SizedBox(height: 18),
+              TextFormField(
+                key: const Key('edit-medication-name'),
+                controller: _nameController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'نام دارو',
+                  prefixIcon: Icon(Icons.medication_outlined),
+                ),
+                validator: (String? value) {
+                  final String normalized = value?.trim() ?? '';
+                  if (normalized.isEmpty) {
+                    return 'نام دارو را وارد کنید.';
+                  }
+                  if (normalized.length > 80) {
+                    return 'نام دارو بیش از حد طولانی است.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<MedicationUnit>(
+                key: const Key('edit-medication-unit'),
+                initialValue: _selectedUnit,
+                decoration: const InputDecoration(
+                  labelText: 'واحد موجودی',
+                  prefixIcon: Icon(Icons.category_outlined),
+                ),
+                items: MedicationUnit.values
+                    .map(
+                      (MedicationUnit unit) => DropdownMenuItem<MedicationUnit>(
+                        value: unit,
+                        child: Text(unit.persianLabel),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: (MedicationUnit? value) {
+                  if (value != null) {
+                    setState(() => _selectedUnit = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                key: const Key('edit-medication-daily-use'),
+                controller: _dailyUseController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'مصرف ثبت‌شده در روز',
+                  prefixIcon: Icon(Icons.schedule_outlined),
+                ),
+                validator: (String? value) {
+                  final double? number = LocalizedNumberParser.tryParseDouble(
+                    value,
+                  );
+                  if (number == null || !number.isFinite || number <= 0) {
+                    return 'عدد بزرگ‌تر از صفر وارد کنید.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                key: const Key('edit-medication-alert-days'),
+                controller: _alertDaysController,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'فاصله هشدار قبل از اتمام',
+                  prefixIcon: Icon(Icons.notifications_outlined),
+                  suffixText: 'روز',
+                ),
+                validator: (String? value) {
+                  final int? number = int.tryParse(
+                    LocalizedNumberParser.normalize(value),
+                  );
+                  if (number == null || number < 0 || number > 365) {
+                    return 'عدد صحیح بین صفر تا ۳۶۵ وارد کنید.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                key: const Key('edit-medication-notes'),
+                controller: _notesController,
+                minLines: 2,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'توضیح اختیاری',
+                  alignLabelWithHint: true,
+                  prefixIcon: Icon(Icons.notes_outlined),
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                key: const Key('save-medication-metadata'),
+                onPressed: _isSaving ? null : _save,
+                icon: _isSaving
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check),
+                label: Text(_isSaving ? 'در حال ذخیره...' : 'ذخیره تغییرات'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    setState(() => _isSaving = true);
+
+    try {
+      final String notes = _notesController.text.trim();
+      final Medication updated = widget.medication.copyWith(
+        name: _nameController.text,
+        unit: _selectedUnit,
+        unitsPerDay: LocalizedNumberParser.tryParseDouble(
+          _dailyUseController.text,
+        ),
+        alertLeadDays: int.parse(
+          LocalizedNumberParser.normalize(_alertDaysController.text),
+        ),
+        notes: notes,
+        clearNotes: notes.isEmpty,
+      );
+      final MedicationRepository repository = ref.read(
+        medicationRepositoryProvider,
+      );
+      await repository.upsert(updated);
+      ref.invalidate(activeMedicationsProvider);
+      ref.invalidate(archivedMedicationsProvider);
+      ref.invalidate(medicationByIdProvider(updated.id));
+
+      if (mounted) {
+        context.goNamed(
+          'medication-details',
+          pathParameters: <String, String>{'medicationId': updated.id},
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('مشخصات دارو به‌روزرسانی شد.')),
+        );
+      }
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ذخیره تغییرات انجام نشد.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  static String _number(double value) {
+    return value == value.roundToDouble()
+        ? value.toInt().toString()
+        : value.toString();
+  }
+}
+
+class _SafetyNotice extends StatelessWidget {
+  const _SafetyNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Icon(
+              Icons.health_and_safety_outlined,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'مقدار مصرف را فقط زمانی تغییر دهید که دستور پزشک یا داروساز '
+                'تغییر کرده باشد. این فرم موجودی را تغییر نمی‌دهد.',
+                style: TextStyle(height: 1.6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NotFound extends StatelessWidget {
+  const _NotFound({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('ویرایش مشخصات دارو')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Icon(Icons.search_off_outlined, size: 64),
+              const SizedBox(height: 16),
+              const Text('این دارو پیدا نشد.'),
+              const SizedBox(height: 16),
+              FilledButton(onPressed: onBack, child: const Text('بازگشت')),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
