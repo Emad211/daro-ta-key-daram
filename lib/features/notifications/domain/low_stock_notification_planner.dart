@@ -4,11 +4,26 @@ import 'notification_payload.dart';
 import 'notification_plan.dart';
 
 final class LowStockNotificationPlanner {
-  const LowStockNotificationPlanner({
+  LowStockNotificationPlanner({
     this.preferredLocalHour = 9,
     this.minimumLeadTime = const Duration(minutes: 1),
-  }) : assert(preferredLocalHour >= 0 && preferredLocalHour <= 23),
-       assert(!minimumLeadTime.isNegative);
+  }) {
+    if (preferredLocalHour < 0 || preferredLocalHour > 23) {
+      throw RangeError.range(
+        preferredLocalHour,
+        0,
+        23,
+        'preferredLocalHour',
+      );
+    }
+    if (minimumLeadTime.isNegative) {
+      throw ArgumentError.value(
+        minimumLeadTime,
+        'minimumLeadTime',
+        'Minimum lead time cannot be negative.',
+      );
+    }
+  }
 
   final int preferredLocalHour;
   final Duration minimumLeadTime;
