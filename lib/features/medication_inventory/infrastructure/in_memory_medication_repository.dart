@@ -48,11 +48,9 @@ class InMemoryMedicationRepository implements MedicationRepository {
   final StreamController<String> _inventoryChanges =
       StreamController<String>.broadcast();
 
-  List<Medication> get _activeSnapshot {
-    return List<Medication>.unmodifiable(
-      _items.where((Medication medication) => !medication.isArchived),
-    );
-  }
+  List<Medication> get _activeSnapshot => _snapshot(isArchived: false);
+
+  List<Medication> get _archivedSnapshot => _snapshot(isArchived: true);
 
   @override
   Future<void> archive(String medicationId) async {
@@ -155,6 +153,12 @@ class InMemoryMedicationRepository implements MedicationRepository {
   }
 
   @override
+  Stream<List<Medication>> watchArchivedMedications() async* {
+    yield _archivedSnapshot;
+    yield* _changes.stream.map((List<Medication> _) => _archivedSnapshot);
+  }
+
+  @override
   Stream<List<InventoryEvent>> watchInventoryEvents(
     String medicationId,
   ) async* {
@@ -168,6 +172,14 @@ class InMemoryMedicationRepository implements MedicationRepository {
 
   void _emit() {
     _changes.add(_activeSnapshot);
+  }
+
+  List<Medication> _snapshot({required bool isArchived}) {
+    return List<Medication>.unmodifiable(
+      _items.where(
+        (Medication medication) => medication.isArchived == isArchived,
+      ),
+    );
   }
 
   List<InventoryEvent> _inventorySnapshot(String medicationId) {

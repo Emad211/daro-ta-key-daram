@@ -16,7 +16,7 @@ class Medication {
   }) : name = name.trim(),
        stockAtRecord = stockAtRecord,
        unitsPerDay = unitsPerDay,
-       notes = notes?.trim() {
+       notes = _normalizeNotes(notes) {
     if (id.trim().isEmpty) {
       throw ArgumentError.value(id, 'id', 'شناسه دارو نمی‌تواند خالی باشد.');
     }
@@ -68,6 +68,7 @@ class Medication {
     DateTime? inventoryRecordedAt,
     int? alertLeadDays,
     String? notes,
+    bool clearNotes = false,
     bool? isArchived,
   }) {
     return Medication(
@@ -78,8 +79,13 @@ class Medication {
       unitsPerDay: unitsPerDay ?? this.unitsPerDay,
       inventoryRecordedAt: inventoryRecordedAt ?? this.inventoryRecordedAt,
       alertLeadDays: alertLeadDays ?? this.alertLeadDays,
-      notes: notes ?? this.notes,
+      notes: clearNotes ? null : notes ?? this.notes,
       isArchived: isArchived ?? this.isArchived,
     );
+  }
+
+  static String? _normalizeNotes(String? value) {
+    final String? normalized = value?.trim();
+    return normalized == null || normalized.isEmpty ? null : normalized;
   }
 }
