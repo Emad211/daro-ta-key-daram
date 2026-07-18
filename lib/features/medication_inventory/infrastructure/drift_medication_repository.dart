@@ -235,8 +235,12 @@ final class DriftMedicationRepository implements MedicationRepository {
   }
 
   DateTime _normalizeUtc(DateTime value) {
+    final int millisecondsSinceEpoch =
+        value.toUtc().millisecondsSinceEpoch ~/
+        Duration.millisecondsPerSecond *
+        Duration.millisecondsPerSecond;
     return DateTime.fromMillisecondsSinceEpoch(
-      value.toUtc().millisecondsSinceEpoch,
+      millisecondsSinceEpoch,
       isUtc: true,
     );
   }
