@@ -15,6 +15,7 @@ if [[ ! -d android ]]; then
 fi
 
 flutter pub get
+dart run build_runner build --delete-conflicting-outputs
 dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
