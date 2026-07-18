@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../application/inventory_event_service.dart';
 import '../../application/medication_repository.dart';
+import '../../domain/inventory_event.dart';
 import '../../domain/medication.dart';
 import '../../infrastructure/drift_medication_repository.dart';
 
@@ -24,10 +26,35 @@ final Provider<MedicationRepository> medicationRepositoryProvider =
       );
     });
 
+final Provider<InventoryEventService> inventoryEventServiceProvider =
+    Provider<InventoryEventService>((Ref ref) {
+      return InventoryEventService(
+        ref.watch(medicationRepositoryProvider),
+        ref.watch(clockProvider),
+      );
+    });
+
 final StreamProvider<List<Medication>> activeMedicationsProvider =
     StreamProvider<List<Medication>>((Ref ref) {
       final MedicationRepository repository = ref.watch(
         medicationRepositoryProvider,
       );
       return repository.watchActiveMedications();
+    });
+
+final medicationByIdProvider = FutureProvider.family<Medication?, String>((
+  Ref ref,
+  String medicationId,
+) {
+  return ref.watch(medicationRepositoryProvider).findById(medicationId);
+});
+
+final inventoryEventsProvider =
+    StreamProvider.family<List<InventoryEvent>, String>((
+      Ref ref,
+      String medicationId,
+    ) {
+      return ref
+          .watch(medicationRepositoryProvider)
+          .watchInventoryEvents(medicationId);
     });

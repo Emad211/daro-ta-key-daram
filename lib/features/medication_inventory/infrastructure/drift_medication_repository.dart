@@ -52,7 +52,7 @@ final class DriftMedicationRepository implements MedicationRepository {
       );
     }
 
-    return _toDomain(medicationRow, inventoryRow);
+    return _toMedicationDomain(medicationRow, inventoryRow);
   }
 
   @override
@@ -177,6 +177,24 @@ final class DriftMedicationRepository implements MedicationRepository {
     return query.watch().map(_latestMedicationRows);
   }
 
+  @override
+  Stream<List<InventoryEvent>> watchInventoryEvents(String medicationId) {
+    final SimpleSelectStatement<InventoryEvents, InventoryEventRow> query =
+        _database.select(_database.inventoryEvents)
+          ..where(
+            (InventoryEvents table) => table.medicationId.equals(medicationId),
+          )
+          ..orderBy(<OrderingTerm Function(InventoryEvents)>[
+            (InventoryEvents table) => OrderingTerm.desc(table.effectiveAt),
+            (InventoryEvents table) => OrderingTerm.desc(table.createdAt),
+          ]);
+
+    return query.watch().map(
+      (List<InventoryEventRow> rows) =>
+          List<InventoryEvent>.unmodifiable(rows.map(_toInventoryEventDomain)),
+    );
+  }
+
   Future<void> _insertInventoryEvent(
     InventoryEvent event, {
     DateTime? effectiveAt,
@@ -225,13 +243,56 @@ final class DriftMedicationRepository implements MedicationRepository {
       final InventoryEventRow inventoryRow = result.readTable(
         _database.inventoryEvents,
       );
-      medicationsById[medicationRow.id] = _toDomain(
+      medicationsById[medicationRow.id] = _toMedicationDomain(
         medicationRow,
         inventoryRow,
       );
     }
 
     return List<Medication>.unmodifiable(medicationsById.values);
+  }
+
+  InventoryEvent _toInventoryEventDomain(InventoryEventRow row) {
+    final InventoryEventType type;
+    try {
+      type = InventoryEventType.values.byName(row.eventType);
+    } on ArgumentError {
+      throw StateError('Unknown inventory event type: ${row.eventType}');
+    }
+
+    return InventoryEvent(
+      id: row.id,
+      medicationId: row.medicationId,
+      type: type,
+      stockUnits: row.stockUnits,
+      effectiveAt: row.effectiveAt.toLocal(),
+      createdAt: row.createdAt.toLocal(),
+      note: row.note,
+    );
+  }
+
+  Medication _toMedicationDomain(
+    MedicationRow medicationRow,
+    InventoryEventRow inventoryRow,
+  ) {
+    final MedicationUnit unit;
+    try {
+      unit = MedicationUnit.values.byName(medicationRow.unit);
+    } on ArgumentError {
+      throw StateError('Unknown medication unit: ${medicationRow.unit}');
+    }
+
+    return Medication(
+      id: medicationRow.id,
+      name: medicationRow.name,
+      unit: unit,
+      stockAtRecord: inventoryRow.stockUnits,
+      unitsPerDay: medicationRow.unitsPerDay,
+      inventoryRecordedAt: inventoryRow.effectiveAt.toLocal(),
+      alertLeadDays: medicationRow.alertLeadDays,
+      notes: medicationRow.notes,
+      isArchived: medicationRow.isArchived,
+    );
   }
 
   DateTime _normalizeUtc(DateTime value) {
@@ -263,29 +324,5 @@ final class DriftMedicationRepository implements MedicationRepository {
     if (affected == 0) {
       throw StateError('Medication $medicationId does not exist.');
     }
-  }
-
-  Medication _toDomain(
-    MedicationRow medicationRow,
-    InventoryEventRow inventoryRow,
-  ) {
-    final MedicationUnit unit;
-    try {
-      unit = MedicationUnit.values.byName(medicationRow.unit);
-    } on ArgumentError {
-      throw StateError('Unknown medication unit: ${medicationRow.unit}');
-    }
-
-    return Medication(
-      id: medicationRow.id,
-      name: medicationRow.name,
-      unit: unit,
-      stockAtRecord: inventoryRow.stockUnits,
-      unitsPerDay: medicationRow.unitsPerDay,
-      inventoryRecordedAt: inventoryRow.effectiveAt.toLocal(),
-      alertLeadDays: medicationRow.alertLeadDays,
-      notes: medicationRow.notes,
-      isArchived: medicationRow.isArchived,
-    );
   }
 }

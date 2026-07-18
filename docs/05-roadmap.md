@@ -20,7 +20,7 @@
 - [x] تست واحد
 - [x] AdService abstraction
 
-## Phase 2 — Local persistence
+## Phase 2 — Local persistence and lifecycle
 
 - [x] Drift/SQLite schema نسخه ۱
 - [x] schema snapshot و migration strategy
@@ -28,10 +28,12 @@
 - [x] restock/correction event history در لایه داده
 - [x] archive/restore و cascade delete در repository
 - [x] تست repository با دیتابیس memory و فایل واقعی
-- [ ] صفحه جزئیات و ویرایش دارو
-- [ ] جریان UI خرید مجدد و اصلاح موجودی
-- [ ] timeline تاریخچه موجودی
-- [ ] صفحه مدیریت آرشیو
+- [x] صفحه جزئیات دارو
+- [x] جریان UI خرید مجدد و اصلاح موجودی
+- [x] timeline تاریخچه موجودی
+- [x] عملیات آرشیو با حفظ تاریخچه
+- [ ] صفحه ویرایش مشخصات دارو
+- [ ] صفحه مدیریت داروهای آرشیوشده و restore
 
 ## Phase 3 — Notifications
 
