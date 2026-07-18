@@ -14,10 +14,9 @@ class Medications extends Table {
   RealColumn get unitsPerDay =>
       real().customConstraint('NOT NULL CHECK (units_per_day > 0)')();
 
-  IntColumn get alertLeadDays => integer()
-      .withDefault(const Constant<int>(5))
-      .customConstraint(
-        'NOT NULL DEFAULT 5 CHECK (alert_lead_days BETWEEN 0 AND 365)',
+  IntColumn get alertLeadDays => integer().customConstraint(
+        'NOT NULL DEFAULT 5 '
+        'CHECK (alert_lead_days BETWEEN 0 AND 365)',
       )();
 
   TextColumn get notes => text().nullable()();
@@ -42,10 +41,10 @@ class InventoryEvents extends Table {
   TextColumn get id => text()();
 
   TextColumn get medicationId => text().references(
-    Medications,
-    #id,
-    onDelete: KeyAction.cascade,
-  )();
+        Medications,
+        #id,
+        onDelete: KeyAction.cascade,
+      )();
 
   TextColumn get eventType => text()();
 

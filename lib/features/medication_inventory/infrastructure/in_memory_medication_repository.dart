@@ -1,12 +1,13 @@
 import 'dart:async';
 
 import '../application/medication_repository.dart';
+import '../domain/inventory_event.dart';
 import '../domain/medication.dart';
 import '../domain/medication_unit.dart';
 
 class InMemoryMedicationRepository implements MedicationRepository {
   InMemoryMedicationRepository({List<Medication>? seed})
-    : _items = <Medication>[...?seed];
+      : _items = <Medication>[...?seed];
 
   factory InMemoryMedicationRepository.withDemoData() {
     final DateTime now = DateTime.now();
@@ -45,14 +46,7 @@ class InMemoryMedicationRepository implements MedicationRepository {
 
   @override
   Future<void> archive(String medicationId) async {
-    final int index = _items.indexWhere(
-      (Medication medication) => medication.id == medicationId,
-    );
-    if (index == -1) {
-      return;
-    }
-    _items[index] = _items[index].copyWith(isArchived: true);
-    _emit();
+    _setArchived(medicationId: medicationId, isArchived: true);
   }
 
   @override
@@ -61,6 +55,39 @@ class InMemoryMedicationRepository implements MedicationRepository {
       (Medication medication) => medication.id == medicationId,
     );
     _emit();
+  }
+
+  @override
+  Future<Medication?> findById(String medicationId) async {
+    for (final Medication medication in _items) {
+      if (medication.id == medicationId) {
+        return medication;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<void> recordInventoryEvent(InventoryEvent event) async {
+    final int index = _items.indexWhere(
+      (Medication medication) => medication.id == event.medicationId,
+    );
+    if (index == -1) {
+      throw StateError(
+        'Cannot create inventory event for a missing medication.',
+      );
+    }
+
+    _items[index] = _items[index].copyWith(
+      stockAtRecord: event.stockUnits,
+      inventoryRecordedAt: event.effectiveAt,
+    );
+    _emit();
+  }
+
+  @override
+  Future<void> restore(String medicationId) async {
+    _setArchived(medicationId: medicationId, isArchived: false);
   }
 
   @override
@@ -84,5 +111,19 @@ class InMemoryMedicationRepository implements MedicationRepository {
 
   void _emit() {
     _changes.add(_activeSnapshot);
+  }
+
+  void _setArchived({
+    required String medicationId,
+    required bool isArchived,
+  }) {
+    final int index = _items.indexWhere(
+      (Medication medication) => medication.id == medicationId,
+    );
+    if (index == -1) {
+      throw StateError('Medication $medicationId does not exist.');
+    }
+    _items[index] = _items[index].copyWith(isArchived: isArchived);
+    _emit();
   }
 }
