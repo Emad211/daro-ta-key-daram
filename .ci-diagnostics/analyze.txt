@@ -1,0 +1,9 @@
+Analyzing daro-ta-key-daram...                                  
+
+   info • The value of the argument is redundant because it matches the default value. Try removing the argument • lib/core/theme/app_theme.dart:9:19 • avoid_redundant_argument_values
+   info • The value of the argument is redundant because it matches the default value. Try removing the argument • lib/features/medication_inventory/infrastructure/in_memory_medication_repository.dart:22:26 • avoid_redundant_argument_values
+   info • Constructor declarations should be before non-constructor declarations. Try moving the constructor declaration before all other members • lib/features/medication_inventory/presentation/widgets/medication_card.dart:159:11 • sort_constructors_first
+   info • The value of the argument is redundant because it matches the default value. Try removing the argument • test/features/medication_inventory/domain/stock_calculator_test.dart:18:24 • avoid_redundant_argument_values
+   info • The value of the argument is redundant because it matches the default value. Try removing the argument • test/features/medication_inventory/domain/stock_calculator_test.dart:38:24 • avoid_redundant_argument_values
+
+5 issues found. (ran in 8.6s)

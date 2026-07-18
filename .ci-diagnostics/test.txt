@@ -1,0 +1,13 @@
+
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator calculates 15 full days for 30 tablets at 2 per day
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator decreases estimated stock as time passes
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator never returns negative remaining stock
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator supports fractional daily use
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator does not consume stock when device time is before record time
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator rejects zero daily use
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/ads/domain/ad_policy_test.dart: AdPolicy blocks ads in critical health context
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/ads/domain/ad_policy_test.dart: AdPolicy allows ad when all frequency rules are satisfied
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/ads/domain/ad_policy_test.dart: AdPolicy blocks ad when daily cap is reached
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/widget_test.dart: renders Persian app title
+
+🎉 10 tests passed.
