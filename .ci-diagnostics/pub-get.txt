@@ -1,0 +1,9 @@
+Resolving dependencies...
+Note: meta is pinned to version 1.18.0 by flutter from the flutter SDK.
+See https://dart.dev/go/sdk-version-pinning for details.
+
+
+Because every version of flutter from sdk depends on meta 1.18.0 and analyzer >=13.1.0 depends on meta ^1.18.3, flutter from sdk is incompatible with analyzer >=13.1.0.
+And because build_runner >=2.15.2 depends on analyzer >=13.3.0 <15.0.0, flutter from sdk is incompatible with build_runner >=2.15.2.
+So, because daro_ta_key_daram depends on both flutter from sdk and build_runner ^2.15.2, version solving failed.
+Failed to update packages.
