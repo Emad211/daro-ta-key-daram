@@ -127,8 +127,7 @@ class MedicationListScreen extends ConsumerWidget {
     final LocalNotificationService service = ref.read(
       localNotificationServiceProvider,
     );
-    final NotificationPermissionState state = await service
-        .requestPermission();
+    final NotificationPermissionState state = await service.requestPermission();
     if (!context.mounted) {
       return;
     }

@@ -104,9 +104,7 @@ final class FlutterLocalNotificationService
       title: plan.title,
       body: plan.body,
       scheduledDate: scheduledDate,
-      notificationDetails: const NotificationDetails(
-        android: _androidDetails,
-      ),
+      notificationDetails: const NotificationDetails(android: _androidDetails),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       payload: plan.payload.encode(),
     );
@@ -123,9 +121,10 @@ final class FlutterLocalNotificationService
   }
 
   AndroidFlutterLocalNotificationsPlugin? get _androidPlugin {
-    return _plugin.resolvePlatformSpecificImplementation<
-      AndroidFlutterLocalNotificationsPlugin
-    >();
+    return _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
   }
 
   Future<void> _configureLocalTimeZone() async {
