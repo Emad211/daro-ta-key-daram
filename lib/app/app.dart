@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/theme/app_theme.dart';
 import 'router.dart';
@@ -16,6 +17,7 @@ class DaroTaKeyApp extends StatelessWidget {
         Locale('fa'),
         Locale('en'),
       ],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: AppTheme.light,
       routerConfig: appRouter,
       builder: (BuildContext context, Widget? child) {
