@@ -42,17 +42,19 @@ final StreamProvider<List<Medication>> activeMedicationsProvider =
       return repository.watchActiveMedications();
     });
 
-final medicationByIdProvider = FutureProvider.family<Medication?, String>(
-  (Ref ref, String medicationId) {
-    return ref.watch(medicationRepositoryProvider).findById(medicationId);
-  },
-);
+final medicationByIdProvider = FutureProvider.family<Medication?, String>((
+  Ref ref,
+  String medicationId,
+) {
+  return ref.watch(medicationRepositoryProvider).findById(medicationId);
+});
 
 final inventoryEventsProvider =
-    StreamProvider.family<List<InventoryEvent>, String>(
-      (Ref ref, String medicationId) {
-        return ref
-            .watch(medicationRepositoryProvider)
-            .watchInventoryEvents(medicationId);
-      },
-    );
+    StreamProvider.family<List<InventoryEvent>, String>((
+      Ref ref,
+      String medicationId,
+    ) {
+      return ref
+          .watch(medicationRepositoryProvider)
+          .watchInventoryEvents(medicationId);
+    });
