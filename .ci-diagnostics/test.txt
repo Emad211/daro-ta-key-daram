@@ -1,0 +1,54 @@
+
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator calculates 15 full days for 30 tablets at 2 per day
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator decreases estimated stock as time passes
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator never returns negative remaining stock
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator supports fractional daily use
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator does not consume stock when device time is before record time
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/domain/stock_calculator_test.dart: StockCalculator rejects zero daily use
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: DriftMedicationRepository creates a medication with one initial inventory event
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: DriftMedicationRepository uses the newest inventory event as calculation baseline
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: DriftMedicationRepository archive hides a medication and restore makes it active
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: DriftMedicationRepository permanent deletion cascades to inventory history
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: DriftMedicationRepository rejects an inventory event for a missing medication
+::group::✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart: DriftMedicationRepository data survives closing and reopening a SQLite file
+WARNING (drift): It looks like you've created the database class AppDatabase multiple times. When these two databases use the same QueryExecutor, race conditions will occur and might corrupt the database. 
+Try to follow the advice at https://drift.simonbinder.eu/faq/#using-the-database or, if you know what you're doing, set driftRuntimeOptions.dontWarnAboutMultipleDatabases = true
+Here is the stacktrace from when the database was opened a second time:
+#0      GeneratedDatabase._handleInstantiated (package:drift/src/runtime/api/db_base.dart:96:30)
+#1      GeneratedDatabase._whenConstructed (package:drift/src/runtime/api/db_base.dart:73:12)
+#2      new GeneratedDatabase (package:drift/src/runtime/api/db_base.dart:64:5)
+#3      new _$AppDatabase (package:daro_ta_key_daram/core/database/app_database.g.dart:1705:36)
+#4      new AppDatabase (package:daro_ta_key_daram/core/database/app_database.dart)
+#5      main.<anonymous closure>.<anonymous closure> (file:///home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart:112:43)
+<asynchronous suspension>
+#6      Declarer.test.<anonymous closure>.<anonymous closure> (package:test_api/src/backend/declarer.dart:253:15)
+<asynchronous suspension>
+#7      Declarer.test.<anonymous closure> (package:test_api/src/backend/declarer.dart:250:11)
+<asynchronous suspension>
+#8      Invoker._waitForOutstandingCallbacks.<anonymous closure> (package:test_api/src/backend/invoker.dart:318:9)
+<asynchronous suspension>
+This warning will only appear on debug builds.
+WARNING (drift): It looks like you've created the database class AppDatabase multiple times. When these two databases use the same QueryExecutor, race conditions will occur and might corrupt the database. 
+Try to follow the advice at https://drift.simonbinder.eu/faq/#using-the-database or, if you know what you're doing, set driftRuntimeOptions.dontWarnAboutMultipleDatabases = true
+Here is the stacktrace from when the database was opened a second time:
+#0      GeneratedDatabase._handleInstantiated (package:drift/src/runtime/api/db_base.dart:96:30)
+#1      GeneratedDatabase._whenConstructed (package:drift/src/runtime/api/db_base.dart:73:12)
+#2      new GeneratedDatabase (package:drift/src/runtime/api/db_base.dart:64:5)
+#3      new _$AppDatabase (package:daro_ta_key_daram/core/database/app_database.g.dart:1705:36)
+#4      new AppDatabase (package:daro_ta_key_daram/core/database/app_database.dart)
+#5      main.<anonymous closure>.<anonymous closure> (file:///home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/medication_inventory/infrastructure/drift_medication_repository_test.dart:118:44)
+<asynchronous suspension>
+#6      Declarer.test.<anonymous closure>.<anonymous closure> (package:test_api/src/backend/declarer.dart:253:15)
+<asynchronous suspension>
+#7      Declarer.test.<anonymous closure> (package:test_api/src/backend/declarer.dart:250:11)
+<asynchronous suspension>
+#8      Invoker._waitForOutstandingCallbacks.<anonymous closure> (package:test_api/src/backend/invoker.dart:318:9)
+<asynchronous suspension>
+This warning will only appear on debug builds.
+::endgroup::
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/widget_test.dart: renders Persian app title
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/ads/domain/ad_policy_test.dart: AdPolicy blocks ads in critical health context
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/ads/domain/ad_policy_test.dart: AdPolicy allows ad when all frequency rules are satisfied
+✅ /home/runner/work/daro-ta-key-daram/daro-ta-key-daram/test/features/ads/domain/ad_policy_test.dart: AdPolicy blocks ad when daily cap is reached
+
+🎉 16 tests passed.
