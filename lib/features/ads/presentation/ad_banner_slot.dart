@@ -25,8 +25,8 @@ class AdBannerSlot extends StatelessWidget {
         child: Text(
           'جایگاه بنر تبلیغاتی — فقط محیط توسعه',
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ),
     );
