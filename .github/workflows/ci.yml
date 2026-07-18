@@ -11,7 +11,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -28,6 +28,7 @@ jobs:
         run: |
           if [ ! -d android ]; then
             flutter create \
+              --no-pub \
               --platforms=android \
               --org ir.emadkarimi \
               --project-name daro_ta_key_daram \
@@ -36,6 +37,15 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Generate Drift code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Verify Drift schema snapshot
+        run: |
+          rm -rf /tmp/daro_drift_schemas
+          bash tool/export_drift_schema.sh /tmp/daro_drift_schemas
+          diff -ru drift_schemas /tmp/daro_drift_schemas
 
       - name: Verify formatting
         run: dart format --output=none --set-exit-if-changed lib test

@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 1: Product engineering foundation and first vertical slice.
+Phase 2: Local persistence foundation completed; medication lifecycle UI is next.
 
 ## Completed
 
@@ -13,20 +13,26 @@ Phase 1: Product engineering foundation and first vertical slice.
 - [x] Architecture Decision Records
 - [x] Flutter source scaffold
 - [x] Core stock calculation domain model
-- [x] In-memory data source
 - [x] Dashboard and add-medication form
-- [x] Unit test suite for the calculation engine
-- [x] CI workflow
+- [x] Drift/SQLite schema version 1
+- [x] Version-controlled schema snapshot
+- [x] Transactional medication repository
+- [x] Initial, restock, and correction inventory events
+- [x] Archive, restore, and cascade deletion at repository level
+- [x] Persistence across database close and reopen
+- [x] CI code generation, schema diff, format, analyze, and tests
+- [x] Automated domain, advertising, widget, and persistence tests
 
 ## Next engineering increment
 
-1. Generate and commit the Android platform project.
-2. Replace the in-memory repository with Drift/SQLite.
-3. Add medication edit, archive and restock history.
+1. Add medication details and edit screen.
+2. Add user-facing restock/correction flow and history timeline.
+3. Add archive/restore management screen.
 4. Add local notifications for low-stock alerts.
-5. Integrate Adivery behind the existing `AdService` contract.
-6. Add analytics events that contain no medication names or health data.
-7. Produce signed internal APK for device testing.
+5. Generate and commit the Android platform project before release signing.
+6. Integrate Adivery behind the existing `AdService` contract.
+7. Add analytics events that contain no medication names or health data.
+8. Produce a signed internal APK for device testing.
 
 ## Repository
 

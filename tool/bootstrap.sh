@@ -8,6 +8,7 @@ fi
 
 if [[ ! -d android ]]; then
   flutter create \
+    --no-pub \
     --platforms=android \
     --org ir.emadkarimi \
     --project-name daro_ta_key_daram \
@@ -15,6 +16,7 @@ if [[ ! -d android ]]; then
 fi
 
 flutter pub get
+dart run build_runner build --delete-conflicting-outputs
 dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
