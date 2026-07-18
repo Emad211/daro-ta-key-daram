@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/medication_inventory/presentation/screens/add_medication_screen.dart';
+import '../features/medication_inventory/presentation/screens/medication_details_screen.dart';
 import '../features/medication_inventory/presentation/screens/medication_list_screen.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -19,6 +20,15 @@ final GoRouter appRouter = GoRouter(
           name: 'add-medication',
           builder: (BuildContext context, GoRouterState state) {
             return const AddMedicationScreen();
+          },
+        ),
+        GoRoute(
+          path: 'medications/:medicationId',
+          name: 'medication-details',
+          builder: (BuildContext context, GoRouterState state) {
+            return MedicationDetailsScreen(
+              medicationId: state.pathParameters['medicationId'] ?? '',
+            );
           },
         ),
       ],

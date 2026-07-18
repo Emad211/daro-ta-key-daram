@@ -7,11 +7,13 @@ class MedicationCard extends StatelessWidget {
   const MedicationCard({
     required this.medication,
     required this.now,
+    this.onTap,
     super.key,
   });
 
   final Medication medication;
   final DateTime now;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -22,87 +24,96 @@ class MedicationCard extends StatelessWidget {
     );
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Container(
-                  width: 46,
-                  height: 46,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: urgencyStyle.background,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(
-                    Icons.medication_outlined,
-                    color: urgencyStyle.foreground,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        medication.name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${_displayNumber(snapshot.estimatedRemainingUnits)} '
-                        '${medication.unit.persianLabel} باقی‌مانده',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: urgencyStyle.background,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                  child: Text(
-                    snapshot.urgency.persianLabel,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Container(
+                    width: 46,
+                    height: 46,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: urgencyStyle.background,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      Icons.medication_outlined,
                       color: urgencyStyle.foreground,
-                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(height: 1),
-            const SizedBox(height: 14),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _Metric(
-                    label: 'روز کامل باقی‌مانده',
-                    value: '${snapshot.fullRemainingDays}',
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          medication.name,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_displayNumber(snapshot.estimatedRemainingUnits)} '
+                          '${medication.unit.persianLabel} باقی‌مانده',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _Metric(
-                    label: 'اتمام تقریبی',
-                    value: _date(snapshot.depletionAt),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: urgencyStyle.background,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      snapshot.urgency.persianLabel,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: urgencyStyle.foreground,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 14),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _Metric(
+                      label: 'روز کامل باقی‌مانده',
+                      value: '${snapshot.fullRemainingDays}',
+                    ),
+                  ),
+                  Expanded(
+                    child: _Metric(
+                      label: 'اتمام تقریبی',
+                      value: _date(snapshot.depletionAt),
+                    ),
+                  ),
+                  if (onTap != null)
+                    const Icon(Icons.chevron_left, size: 22),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

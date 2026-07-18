@@ -71,7 +71,16 @@ class MedicationListScreen extends ConsumerWidget {
                 ...sorted.map(
                   (Medication medication) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: MedicationCard(medication: medication, now: now),
+                    child: MedicationCard(
+                      medication: medication,
+                      now: now,
+                      onTap: () => context.goNamed(
+                        'medication-details',
+                        pathParameters: <String, String>{
+                          'medicationId': medication.id,
+                        },
+                      ),
+                    ),
                   ),
                 ),
               ],
