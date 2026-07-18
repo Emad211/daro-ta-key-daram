@@ -33,6 +33,11 @@ class MedicationListScreen extends ConsumerWidget {
         ),
         actions: <Widget>[
           IconButton(
+            tooltip: 'مدیریت آرشیو',
+            onPressed: () => context.goNamed('archived-medications'),
+            icon: const Icon(Icons.archive_outlined),
+          ),
+          IconButton(
             tooltip: 'فعال‌کردن یادآوری موجودی',
             onPressed: () => _requestNotificationPermission(context, ref),
             icon: const Icon(Icons.notifications_active_outlined),
