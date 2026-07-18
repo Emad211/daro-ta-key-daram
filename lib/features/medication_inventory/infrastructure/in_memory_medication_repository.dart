@@ -7,7 +7,7 @@ import '../domain/medication_unit.dart';
 
 class InMemoryMedicationRepository implements MedicationRepository {
   InMemoryMedicationRepository({List<Medication>? seed})
-      : _items = <Medication>[...?seed];
+    : _items = <Medication>[...?seed];
 
   factory InMemoryMedicationRepository.withDemoData() {
     final DateTime now = DateTime.now();
@@ -113,10 +113,7 @@ class InMemoryMedicationRepository implements MedicationRepository {
     _changes.add(_activeSnapshot);
   }
 
-  void _setArchived({
-    required String medicationId,
-    required bool isArchived,
-  }) {
+  void _setArchived({required String medicationId, required bool isArchived}) {
     final int index = _items.indexWhere(
       (Medication medication) => medication.id == medicationId,
     );

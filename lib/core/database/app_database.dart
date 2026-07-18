@@ -15,9 +15,9 @@ class Medications extends Table {
       real().customConstraint('NOT NULL CHECK (units_per_day > 0)')();
 
   IntColumn get alertLeadDays => integer().customConstraint(
-        'NOT NULL DEFAULT 5 '
-        'CHECK (alert_lead_days BETWEEN 0 AND 365)',
-      )();
+    'NOT NULL DEFAULT 5 '
+    'CHECK (alert_lead_days BETWEEN 0 AND 365)',
+  )();
 
   TextColumn get notes => text().nullable()();
 
@@ -40,11 +40,8 @@ class Medications extends Table {
 class InventoryEvents extends Table {
   TextColumn get id => text()();
 
-  TextColumn get medicationId => text().references(
-        Medications,
-        #id,
-        onDelete: KeyAction.cascade,
-      )();
+  TextColumn get medicationId =>
+      text().references(Medications, #id, onDelete: KeyAction.cascade)();
 
   TextColumn get eventType => text()();
 
@@ -91,34 +88,29 @@ class AdFrequencyCaps extends Table {
 }
 
 @DriftDatabase(
-  tables: <Type>[
-    Medications,
-    InventoryEvents,
-    AppPreferences,
-    AdFrequencyCaps,
-  ],
+  tables: <Type>[Medications, InventoryEvents, AppPreferences, AdFrequencyCaps],
 )
 final class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   AppDatabase.defaults()
-      : super(
-          driftDatabase(
-            name: 'daro_ta_key_daram',
-            native: const DriftNativeOptions(shareAcrossIsolates: true),
-          ),
-        );
+    : super(
+        driftDatabase(
+          name: 'daro_ta_key_daram',
+          native: const DriftNativeOptions(shareAcrossIsolates: true),
+        ),
+      );
 
   @override
   int get schemaVersion => 1;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (Migrator migrator) async {
-          await migrator.createAll();
-        },
-        beforeOpen: (OpeningDetails details) async {
-          await customStatement('PRAGMA foreign_keys = ON');
-        },
-      );
+    onCreate: (Migrator migrator) async {
+      await migrator.createAll();
+    },
+    beforeOpen: (OpeningDetails details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
 }

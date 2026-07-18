@@ -12,8 +12,8 @@ final class DriftMedicationRepository implements MedicationRepository {
     this._database, {
     Uuid? uuid,
     DateTime Function()? clock,
-  })  : _uuid = uuid ?? Uuid(),
-        _clock = clock ?? DateTime.now;
+  }) : _uuid = uuid ?? Uuid(),
+       _clock = clock ?? DateTime.now;
 
   final AppDatabase _database;
   final Uuid _uuid;
@@ -27,18 +27,18 @@ final class DriftMedicationRepository implements MedicationRepository {
   @override
   Future<void> deletePermanently(String medicationId) async {
     await _database.transaction(() async {
-      await (_database.delete(_database.medications)
-            ..where((Medications table) => table.id.equals(medicationId)))
-          .go();
+      await (_database.delete(
+        _database.medications,
+      )..where((Medications table) => table.id.equals(medicationId))).go();
     });
   }
 
   @override
   Future<Medication?> findById(String medicationId) async {
-    final MedicationRow? medicationRow = await (_database
-            .select(_database.medications)
-          ..where((Medications table) => table.id.equals(medicationId)))
-        .getSingleOrNull();
+    final MedicationRow? medicationRow =
+        await (_database.select(_database.medications)
+              ..where((Medications table) => table.id.equals(medicationId)))
+            .getSingleOrNull();
     if (medicationRow == null) {
       return null;
     }
@@ -58,12 +58,11 @@ final class DriftMedicationRepository implements MedicationRepository {
   @override
   Future<void> recordInventoryEvent(InventoryEvent event) async {
     await _database.transaction(() async {
-      final MedicationRow? medication = await (_database
-              .select(_database.medications)
-            ..where(
-              (Medications table) => table.id.equals(event.medicationId),
-            ))
-          .getSingleOrNull();
+      final MedicationRow? medication =
+          await (_database.select(_database.medications)..where(
+                (Medications table) => table.id.equals(event.medicationId),
+              ))
+              .getSingleOrNull();
       if (medication == null) {
         throw StateError(
           'Cannot create inventory event for a missing medication.',
@@ -72,14 +71,10 @@ final class DriftMedicationRepository implements MedicationRepository {
 
       await _insertInventoryEvent(event);
       await (_database.update(_database.medications)
-            ..where(
-              (Medications table) => table.id.equals(event.medicationId),
-            ))
+            ..where((Medications table) => table.id.equals(event.medicationId)))
           .write(
-        MedicationsCompanion(
-          updatedAt: Value<DateTime>(_clock().toUtc()),
-        ),
-      );
+            MedicationsCompanion(updatedAt: Value<DateTime>(_clock().toUtc())),
+          );
     });
   }
 
@@ -91,10 +86,10 @@ final class DriftMedicationRepository implements MedicationRepository {
   @override
   Future<void> upsert(Medication medication) async {
     await _database.transaction(() async {
-      final MedicationRow? existing = await (_database
-              .select(_database.medications)
-            ..where((Medications table) => table.id.equals(medication.id)))
-          .getSingleOrNull();
+      final MedicationRow? existing =
+          await (_database.select(_database.medications)
+                ..where((Medications table) => table.id.equals(medication.id)))
+              .getSingleOrNull();
       final DateTime now = _clock().toUtc();
 
       final MedicationsCompanion companion = MedicationsCompanion(
@@ -121,7 +116,8 @@ final class DriftMedicationRepository implements MedicationRepository {
         medication.id,
       );
       final DateTime effectiveAt = medication.inventoryRecordedAt.toUtc();
-      final bool baselineChanged = latest == null ||
+      final bool baselineChanged =
+          latest == null ||
           latest.stockUnits != medication.stockAtRecord ||
           latest.effectiveAt != effectiveAt;
 
@@ -144,31 +140,30 @@ final class DriftMedicationRepository implements MedicationRepository {
 
   @override
   Stream<List<Medication>> watchActiveMedications() {
-    final JoinedSelectStatement<HasResultSet, dynamic> query = _database
-        .select(_database.medications)
-        .join(
-      <Join<HasResultSet, dynamic>>[
-        innerJoin(
-          _database.inventoryEvents,
-          _database.inventoryEvents.medicationId.equalsExp(
-            _database.medications.id,
-          ),
-        ),
-      ],
-    )
-      ..where(_database.medications.isArchived.equals(false))
-      ..orderBy(
-        <OrderingTerm>[
-          OrderingTerm.desc(_database.inventoryEvents.effectiveAt),
-          OrderingTerm.desc(_database.inventoryEvents.createdAt),
-        ],
-      );
+    final JoinedSelectStatement<HasResultSet, dynamic> query =
+        _database
+            .select(_database.medications)
+            .join(<Join<HasResultSet, dynamic>>[
+              innerJoin(
+                _database.inventoryEvents,
+                _database.inventoryEvents.medicationId.equalsExp(
+                  _database.medications.id,
+                ),
+              ),
+            ])
+          ..where(_database.medications.isArchived.equals(false))
+          ..orderBy(<OrderingTerm>[
+            OrderingTerm.desc(_database.inventoryEvents.effectiveAt),
+            OrderingTerm.desc(_database.inventoryEvents.createdAt),
+          ]);
 
     return query.watch().map(_latestMedicationRows);
   }
 
   Future<void> _insertInventoryEvent(InventoryEvent event) {
-    return _database.into(_database.inventoryEvents).insert(
+    return _database
+        .into(_database.inventoryEvents)
+        .insert(
           InventoryEventsCompanion(
             id: Value<String>(event.id),
             medicationId: Value<String>(event.medicationId),
@@ -181,20 +176,16 @@ final class DriftMedicationRepository implements MedicationRepository {
         );
   }
 
-  Future<InventoryEventRow?> _latestInventoryEvent(
-    String medicationId,
-  ) {
+  Future<InventoryEventRow?> _latestInventoryEvent(String medicationId) {
     final SimpleSelectStatement<InventoryEvents, InventoryEventRow> query =
         _database.select(_database.inventoryEvents)
           ..where(
             (InventoryEvents table) => table.medicationId.equals(medicationId),
           )
-          ..orderBy(
-            <OrderingTerm Function(InventoryEvents)>[
-              (InventoryEvents table) => OrderingTerm.desc(table.effectiveAt),
-              (InventoryEvents table) => OrderingTerm.desc(table.createdAt),
-            ],
-          )
+          ..orderBy(<OrderingTerm Function(InventoryEvents)>[
+            (InventoryEvents table) => OrderingTerm.desc(table.effectiveAt),
+            (InventoryEvents table) => OrderingTerm.desc(table.createdAt),
+          ])
           ..limit(1);
     return query.getSingleOrNull();
   }
@@ -225,14 +216,15 @@ final class DriftMedicationRepository implements MedicationRepository {
     required String medicationId,
     required bool isArchived,
   }) async {
-    final int affected = await (_database.update(_database.medications)
-          ..where((Medications table) => table.id.equals(medicationId)))
-        .write(
-      MedicationsCompanion(
-        isArchived: Value<bool>(isArchived),
-        updatedAt: Value<DateTime>(_clock().toUtc()),
-      ),
-    );
+    final int affected =
+        await (_database.update(
+          _database.medications,
+        )..where((Medications table) => table.id.equals(medicationId))).write(
+          MedicationsCompanion(
+            isArchived: Value<bool>(isArchived),
+            updatedAt: Value<DateTime>(_clock().toUtc()),
+          ),
+        );
     if (affected == 0) {
       throw StateError('Medication $medicationId does not exist.');
     }

@@ -1,8 +1,4 @@
-enum InventoryEventType {
-  initial,
-  restock,
-  correction,
-}
+enum InventoryEventType { initial, restock, correction }
 
 class InventoryEvent {
   InventoryEvent({
@@ -13,8 +9,8 @@ class InventoryEvent {
     required this.effectiveAt,
     required this.createdAt,
     String? note,
-  })  : stockUnits = stockUnits,
-        note = note?.trim() {
+  }) : stockUnits = stockUnits,
+       note = note?.trim() {
     if (id.trim().isEmpty) {
       throw ArgumentError.value(id, 'id', 'شناسه رویداد نمی‌تواند خالی باشد.');
     }
