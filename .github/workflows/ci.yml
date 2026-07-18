@@ -41,6 +41,12 @@ jobs:
       - name: Generate Drift code
         run: dart run build_runner build --delete-conflicting-outputs
 
+      - name: Verify Drift schema snapshot
+        run: |
+          rm -rf /tmp/daro_drift_schemas
+          bash tool/export_drift_schema.sh /tmp/daro_drift_schemas
+          diff -ru drift_schemas /tmp/daro_drift_schemas
+
       - name: Verify formatting
         run: dart format --output=none --set-exit-if-changed lib test
 

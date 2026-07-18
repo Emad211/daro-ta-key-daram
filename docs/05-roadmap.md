@@ -16,18 +16,22 @@
 - [x] موتور محاسبه زمان اتمام
 - [x] داشبورد اولیه
 - [x] افزودن دارو
-- [x] repository موقت در حافظه
+- [x] repository موقت در حافظه برای تست
 - [x] تست واحد
 - [x] AdService abstraction
 
 ## Phase 2 — Local persistence
 
-- [ ] Drift/SQLite schema
-- [ ] migration strategy
-- [ ] medication CRUD کامل
-- [ ] restock event history
-- [ ] archive/restore
-- [ ] تست repository
+- [x] Drift/SQLite schema نسخه ۱
+- [x] schema snapshot و migration strategy
+- [x] repository واقعی و transactionها
+- [x] restock/correction event history در لایه داده
+- [x] archive/restore و cascade delete در repository
+- [x] تست repository با دیتابیس memory و فایل واقعی
+- [ ] صفحه جزئیات و ویرایش دارو
+- [ ] جریان UI خرید مجدد و اصلاح موجودی
+- [ ] timeline تاریخچه موجودی
+- [ ] صفحه مدیریت آرشیو
 
 ## Phase 3 — Notifications
 
