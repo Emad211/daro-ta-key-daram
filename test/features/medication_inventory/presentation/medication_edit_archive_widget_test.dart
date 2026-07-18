@@ -4,7 +4,6 @@ import 'package:daro_ta_key_daram/features/medication_inventory/domain/medicatio
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication_unit.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/infrastructure/in_memory_medication_repository.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/presentation/providers/medication_providers.dart';
-import 'package:daro_ta_key_daram/features/notifications/application/local_notification_service.dart';
 import 'package:daro_ta_key_daram/features/notifications/infrastructure/noop_local_notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
