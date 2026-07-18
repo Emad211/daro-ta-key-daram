@@ -3,6 +3,7 @@ name: Patch medication management navigation
 on:
   pull_request:
     types: [opened, synchronize]
+  workflow_dispatch:
 
 permissions:
   contents: write
