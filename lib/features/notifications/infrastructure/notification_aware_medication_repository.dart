@@ -1,3 +1,4 @@
+import '../../medication_inventory/application/medication_details_update.dart';
 import '../../medication_inventory/application/medication_repository.dart';
 import '../../medication_inventory/domain/inventory_event.dart';
 import '../../medication_inventory/domain/medication.dart';
@@ -34,9 +35,15 @@ final class NotificationAwareMedicationRepository
   }
 
   @override
-  Future<void> upsert(Medication medication) async {
-    await _delegate.upsert(medication);
+  Future<void> create(Medication medication) async {
+    await _delegate.create(medication);
     await _notifications.rescheduleMedication(medication.id);
+  }
+
+  @override
+  Future<void> updateDetails(MedicationDetailsUpdate update) async {
+    await _delegate.updateDetails(update);
+    await _notifications.rescheduleMedication(update.medicationId);
   }
 
   @override
