@@ -1,0 +1,94 @@
+--- a/lib/features/medication_inventory/infrastructure/drift_medication_repository.dart
++++ b/lib/features/medication_inventory/infrastructure/drift_medication_repository.dart
+@@ -31,11 +31,14 @@ final class DriftMedicationRepository implements MedicationRepository {
+ 
+   @override
+   Future<void> deletePermanently(String medicationId) async {
+-    await _database.transaction(() async {
+-      await (_database.delete(
++    final int affected = await _database.transaction(() async {
++      return (_database.delete(
+         _database.medications,
+       )..where((Medications table) => table.id.equals(medicationId))).go();
+     });
++    if (affected == 0) {
++      throw StateError('The requested aggregate does not exist.');
++    }
+   }
+@@ -83,6 +86,18 @@ final class DriftMedicationRepository implements MedicationRepository {
+           'Cannot create inventory event for a missing medication.',
+         );
+       }
++      if (medication.isArchived) {
++        throw StateError('Archived aggregates are read-only.');
++      }
++      final InventoryEventRow? duplicate =
++          await (_database.select(_database.inventoryEvents)..where(
++                (InventoryEvents table) => table.id.equals(event.id),
++              ))
++              .getSingleOrNull();
++      if (duplicate != null) {
++        throw StateError('An event with this identifier already exists.');
++      }
+ 
+       await _insertInventoryEvent(event, effectiveAt: effectiveAt);
+@@ -98,6 +113,13 @@ final class DriftMedicationRepository implements MedicationRepository {
+ 
+   @override
+   Future<void> create(Medication medication) async {
++    if (medication.isArchived) {
++      throw ArgumentError.value(
++        medication.isArchived,
++        'medication.isArchived',
++        'A new aggregate must start active.',
++      );
++    }
+     final DateTime now = _nowUtc();
+@@ -163,6 +185,9 @@ final class DriftMedicationRepository implements MedicationRepository {
+       if (existing == null) {
+         throw StateError('The requested aggregate does not exist.');
+       }
++      if (existing.isArchived) {
++        throw StateError('Archived aggregates are read-only.');
++      }
+ 
+       final InventoryEventRow? latest = await _latestInventoryEvent(
+@@ -396,18 +421,25 @@ final class DriftMedicationRepository implements MedicationRepository {
+     required String medicationId,
+     required bool isArchived,
+   }) async {
+-    final int affected =
+-        await (_database.update(
+-          _database.medications,
+-        )..where((Medications table) => table.id.equals(medicationId))).write(
+-          MedicationsCompanion(
+-            isArchived: Value<bool>(isArchived),
+-            updatedAt: Value<DateTime>(_nowUtc()),
+-          ),
+-        );
+-    if (affected == 0) {
+-      throw StateError('Medication $medicationId does not exist.');
+-    }
++    await _database.transaction(() async {
++      final MedicationRow? current =
++          await (_database.select(_database.medications)..where(
++                (Medications table) => table.id.equals(medicationId),
++              ))
++              .getSingleOrNull();
++      if (current == null) {
++        throw StateError('The requested aggregate does not exist.');
++      }
++      if (current.isArchived == isArchived) {
++        return;
++      }
++      await (_database.update(_database.medications)
++            ..where((Medications table) => table.id.equals(medicationId)))
++          .write(
++            MedicationsCompanion(
++              isArchived: Value<bool>(isArchived),
++              updatedAt: Value<DateTime>(_nowUtc()),
++            ),
++          );
++    });
+   }
+ }
