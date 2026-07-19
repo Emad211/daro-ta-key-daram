@@ -23,9 +23,7 @@ abstract final class StockCalculator {
         projection.estimatedRemainingUnits <= 0;
     final double exactRemainingDays = isDepleted
         ? 0
-        : projection.depletionAt
-                  .difference(effectiveNow)
-                  .inMicroseconds /
+        : projection.depletionAt.difference(effectiveNow).inMicroseconds /
               Duration.microsecondsPerDay;
     final DateTime reorderCandidate = projection.depletionAt.subtract(
       Duration(days: medication.alertLeadDays),
