@@ -1,6 +1,6 @@
-import 'medication_details_update.dart';
 import '../domain/inventory_event.dart';
 import '../domain/medication.dart';
+import 'medication_details_update.dart';
 
 abstract interface class MedicationRepository {
   Stream<List<Medication>> watchActiveMedications();
