@@ -58,7 +58,7 @@ lib/
 | name | String | نامی که کاربر وارد می‌کند |
 | unit | MedicationUnit | واحد شمارش |
 | stockAtRecord | double | موجودی در زمان ثبت |
-| unitsPerDay | double | مصرف روزانه طبق دستور پزشک |
+| consumptionSchedule | ConsumptionSchedule | برنامه ساختاریافته روزانه، هر N روز یا روزهای هفته |
 | inventoryRecordedAt | DateTime | زمان مبنای محاسبه |
 | alertLeadDays | int | فاصله هشدار |
 | notes | String? | توضیح اختیاری |
@@ -74,16 +74,9 @@ lib/
 - زمان پیشنهادشده برای هشدار
 - وضعیت urgency
 
-## فرمول پایه
+## مدل محاسبه
 
-```text
-elapsedDays = max(0, now - inventoryRecordedAt)
-estimatedRemaining = max(0, stockAtRecord - elapsedDays × unitsPerDay)
-remainingDays = estimatedRemaining / unitsPerDay
-depletionAt = inventoryRecordedAt + (stockAtRecord / unitsPerDay)
-```
-
-این فرمول یک **مدل تخمینی با نرخ ثابت** است. برنامه باید این محدودیت را به کاربر توضیح دهد.
+Domain برنامه مصرف را به رخدادهای زمانی تبدیل می‌کند. موجودی فقط بر اساس تعداد رخدادهای کامل‌شده کم می‌شود؛ بنابراین برنامه‌های هفتگی و یک‌روزدرمیان به نرخ اعشاری پیوسته تبدیل نمی‌شوند. جزئیات و invariantها در [`08-stock-calculation.md`](08-stock-calculation.md) ثبت شده‌اند.
 
 ## Persistence plan
 

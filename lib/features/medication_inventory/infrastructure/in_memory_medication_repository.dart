@@ -1,13 +1,17 @@
 import 'dart:async';
 
 import '../application/medication_repository.dart';
+import '../domain/consumption_schedule.dart';
 import '../domain/inventory_event.dart';
 import '../domain/medication.dart';
 import '../domain/medication_unit.dart';
 
 class InMemoryMedicationRepository implements MedicationRepository {
-  InMemoryMedicationRepository({List<Medication>? seed})
-    : _items = <Medication>[...?seed] {
+  InMemoryMedicationRepository({
+    List<Medication>? seed,
+    DateTime Function()? clock,
+  }) : _items = <Medication>[...?seed],
+       _clock = clock ?? DateTime.now {
     for (final Medication medication in _items) {
       _eventsByMedicationId[medication.id] = <InventoryEvent>[
         _initialEventFor(medication),
@@ -24,7 +28,10 @@ class InMemoryMedicationRepository implements MedicationRepository {
           name: 'متفورمین',
           unit: MedicationUnit.tablet,
           stockAtRecord: 30,
-          unitsPerDay: 2,
+          consumptionSchedule: DailyConsumptionSchedule(
+            amountPerOccurrence: 1,
+            occurrencesPerDay: 2,
+          ),
           inventoryRecordedAt: now,
         ),
         Medication(
@@ -32,7 +39,10 @@ class InMemoryMedicationRepository implements MedicationRepository {
           name: 'ویتامین D',
           unit: MedicationUnit.capsule,
           stockAtRecord: 4,
-          unitsPerDay: 1 / 7,
+          consumptionSchedule: WeeklyConsumptionSchedule(
+            amountPerOccurrence: 1,
+            weekdays: <int>{DateTime.friday},
+          ),
           inventoryRecordedAt: now,
           alertLeadDays: 7,
         ),
@@ -41,6 +51,7 @@ class InMemoryMedicationRepository implements MedicationRepository {
   }
 
   final List<Medication> _items;
+  final DateTime Function() _clock;
   final Map<String, List<InventoryEvent>> _eventsByMedicationId =
       <String, List<InventoryEvent>>{};
   final StreamController<List<Medication>> _changes =
@@ -119,29 +130,67 @@ class InMemoryMedicationRepository implements MedicationRepository {
         _initialEventFor(medication),
       ];
       _inventoryChanges.add(medication.id);
-    } else {
-      final Medication previous = _items[index];
-      _items[index] = medication;
-      final bool baselineChanged =
-          previous.stockAtRecord != medication.stockAtRecord ||
-          previous.inventoryRecordedAt != medication.inventoryRecordedAt;
-      if (baselineChanged) {
-        final InventoryEvent correction = InventoryEvent(
-          id:
-              'memory-correction-${medication.id}-'
-              '${medication.inventoryRecordedAt.microsecondsSinceEpoch}',
-          medicationId: medication.id,
-          type: InventoryEventType.correction,
-          stockUnits: medication.stockAtRecord,
-          effectiveAt: medication.inventoryRecordedAt,
-          createdAt: medication.inventoryRecordedAt,
-        );
-        _eventsByMedicationId
-            .putIfAbsent(medication.id, () => <InventoryEvent>[])
-            .add(correction);
-        _eventsByMedicationId[medication.id]?.sort(_newestFirst);
-        _inventoryChanges.add(medication.id);
-      }
+      _emit();
+      return;
+    }
+
+    final Medication previous = _items[index];
+    final bool scheduleChanged =
+        previous.consumptionSchedule != medication.consumptionSchedule;
+    final bool baselineChanged =
+        previous.stockAtRecord != medication.stockAtRecord ||
+        previous.inventoryRecordedAt != medication.inventoryRecordedAt;
+    if (scheduleChanged && baselineChanged) {
+      throw ArgumentError(
+        'Change the consumption schedule and inventory baseline in separate '
+        'operations.',
+      );
+    }
+
+    if (scheduleChanged) {
+      final DateTime now = _clock();
+      final double currentEstimatedStock = previous
+          .stockAt(now)
+          .estimatedRemainingUnits;
+      _items[index] = medication.copyWith(
+        stockAtRecord: currentEstimatedStock,
+        inventoryRecordedAt: now,
+      );
+      final InventoryEvent change = InventoryEvent(
+        id: 'memory-schedule-${medication.id}-${now.microsecondsSinceEpoch}',
+        medicationId: medication.id,
+        type: InventoryEventType.scheduleChange,
+        stockUnits: currentEstimatedStock,
+        effectiveAt: now,
+        createdAt: now,
+        note: 'مبنای موجودی پس از تغییر برنامه مصرف',
+      );
+      _eventsByMedicationId
+          .putIfAbsent(medication.id, () => <InventoryEvent>[])
+          .add(change);
+      _eventsByMedicationId[medication.id]?.sort(_newestFirst);
+      _inventoryChanges.add(medication.id);
+      _emit();
+      return;
+    }
+
+    _items[index] = medication;
+    if (baselineChanged) {
+      final InventoryEvent correction = InventoryEvent(
+        id:
+            'memory-correction-${medication.id}-'
+            '${medication.inventoryRecordedAt.microsecondsSinceEpoch}',
+        medicationId: medication.id,
+        type: InventoryEventType.correction,
+        stockUnits: medication.stockAtRecord,
+        effectiveAt: medication.inventoryRecordedAt,
+        createdAt: medication.inventoryRecordedAt,
+      );
+      _eventsByMedicationId
+          .putIfAbsent(medication.id, () => <InventoryEvent>[])
+          .add(correction);
+      _eventsByMedicationId[medication.id]?.sort(_newestFirst);
+      _inventoryChanges.add(medication.id);
     }
     _emit();
   }

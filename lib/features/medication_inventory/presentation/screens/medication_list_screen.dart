@@ -63,7 +63,7 @@ class MedicationListScreen extends ConsumerWidget {
             return EmptyState(
               title: 'هنوز دارویی ثبت نشده',
               message:
-                  'موجودی و مصرف روزانه دارو را وارد کن تا برنامه '
+                  'موجودی و برنامه مصرف دارو را وارد کن تا برنامه '
                   'زمان تقریبی اتمام آن را حساب کند.',
               actionLabel: 'ثبت اولین دارو',
               onAction: () => context.go('/add'),

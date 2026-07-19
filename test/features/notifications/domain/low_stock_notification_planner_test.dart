@@ -1,3 +1,4 @@
+import 'package:daro_ta_key_daram/features/medication_inventory/domain/consumption_schedule.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication_unit.dart';
 import 'package:daro_ta_key_daram/features/notifications/domain/low_stock_notification_planner.dart';
@@ -64,6 +65,30 @@ void main() {
     expect(plan?.kind, StockNotificationKind.depleted);
     expect(plan?.scheduledAt, now.add(const Duration(minutes: 1)));
     expect(plan?.title, contains('تمام شده'));
+  });
+
+  test('uses the real weekly occurrence date instead of a decimal average', () {
+    final DateTime now = DateTime(2026, 7, 1, 8);
+    final Medication medication = Medication(
+      id: 'weekly-medication',
+      name: 'ویتامین D',
+      unit: MedicationUnit.capsule,
+      stockAtRecord: 4,
+      consumptionSchedule: WeeklyConsumptionSchedule(
+        amountPerOccurrence: 1,
+        weekdays: <int>{DateTime.friday},
+      ),
+      inventoryRecordedAt: now,
+      alertLeadDays: 7,
+    );
+
+    final NotificationPlan? plan = planner.plan(
+      medication: medication,
+      now: now,
+    );
+
+    expect(plan?.kind, StockNotificationKind.lowStock);
+    expect(plan?.scheduledAt, DateTime(2026, 7, 17, 9));
   });
 
   test('returns no plan for an archived medication', () {

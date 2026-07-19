@@ -1,13 +1,15 @@
 enum InventoryEventType {
   initial,
   restock,
-  correction;
+  correction,
+  scheduleChange;
 
   String get persianLabel {
     return switch (this) {
       InventoryEventType.initial => 'ثبت اولیه',
       InventoryEventType.restock => 'خرید مجدد',
       InventoryEventType.correction => 'اصلاح موجودی',
+      InventoryEventType.scheduleChange => 'تغییر برنامه مصرف',
     };
   }
 }

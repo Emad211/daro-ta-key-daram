@@ -3,6 +3,8 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../application/medication_repository.dart';
+import '../domain/consumption_schedule.dart';
+import '../domain/consumption_schedule_codec.dart';
 import '../domain/inventory_event.dart';
 import '../domain/medication.dart';
 import '../domain/medication_unit.dart';
@@ -94,8 +96,10 @@ final class DriftMedicationRepository implements MedicationRepository {
   @override
   Future<void> upsert(Medication medication) async {
     final DateTime now = _nowUtc();
-    final DateTime effectiveAt = _normalizeUtc(medication.inventoryRecordedAt);
-    if (effectiveAt.isAfter(now)) {
+    final DateTime requestedEffectiveAt = _normalizeUtc(
+      medication.inventoryRecordedAt,
+    );
+    if (requestedEffectiveAt.isAfter(now)) {
       throw ArgumentError.value(
         medication.inventoryRecordedAt,
         'medication.inventoryRecordedAt',
@@ -108,12 +112,42 @@ final class DriftMedicationRepository implements MedicationRepository {
           await (_database.select(_database.medications)
                 ..where((Medications table) => table.id.equals(medication.id)))
               .getSingleOrNull();
+      final InventoryEventRow? latest = existing == null
+          ? null
+          : await _latestInventoryEvent(medication.id);
+      if (existing != null && latest == null) {
+        throw StateError(
+          'Medication ${medication.id} has no inventory baseline event.',
+        );
+      }
+
+      final Medication? previousMedication = existing == null
+          ? null
+          : _toMedicationDomain(existing, latest!);
+      final bool scheduleChanged =
+          previousMedication != null &&
+          previousMedication.consumptionSchedule !=
+              medication.consumptionSchedule;
+      final bool requestedBaselineChanged =
+          latest == null ||
+          latest.stockUnits != medication.stockAtRecord ||
+          _normalizeUtc(latest.effectiveAt) != requestedEffectiveAt;
+
+      if (scheduleChanged && requestedBaselineChanged) {
+        throw ArgumentError(
+          'Change the consumption schedule and inventory baseline in separate '
+          'operations.',
+        );
+      }
 
       final MedicationsCompanion companion = MedicationsCompanion(
         id: Value<String>(medication.id),
         name: Value<String>(medication.name),
         unit: Value<String>(medication.unit.name),
         unitsPerDay: Value<double>(medication.unitsPerDay),
+        consumptionScheduleJson: Value<String>(
+          ConsumptionScheduleCodec.encode(medication.consumptionSchedule),
+        ),
         alertLeadDays: Value<int>(medication.alertLeadDays),
         notes: Value<String?>(medication.notes),
         isArchived: Value<bool>(medication.isArchived),
@@ -129,27 +163,51 @@ final class DriftMedicationRepository implements MedicationRepository {
             .write(companion);
       }
 
-      final InventoryEventRow? latest = await _latestInventoryEvent(
-        medication.id,
-      );
-      final bool baselineChanged =
-          latest == null ||
-          latest.stockUnits != medication.stockAtRecord ||
-          _normalizeUtc(latest.effectiveAt) != effectiveAt;
-
-      if (baselineChanged) {
+      if (existing == null) {
         await _insertInventoryEvent(
           InventoryEvent(
             id: _uuid.v4(),
             medicationId: medication.id,
-            type: latest == null
-                ? InventoryEventType.initial
-                : InventoryEventType.correction,
+            type: InventoryEventType.initial,
             stockUnits: medication.stockAtRecord,
-            effectiveAt: effectiveAt,
+            effectiveAt: requestedEffectiveAt,
             createdAt: now,
           ),
-          effectiveAt: effectiveAt,
+          effectiveAt: requestedEffectiveAt,
+        );
+        return;
+      }
+
+      if (scheduleChanged) {
+        final double currentEstimatedStock = previousMedication
+            .stockAt(now.toLocal())
+            .estimatedRemainingUnits;
+        await _insertInventoryEvent(
+          InventoryEvent(
+            id: _uuid.v4(),
+            medicationId: medication.id,
+            type: InventoryEventType.scheduleChange,
+            stockUnits: currentEstimatedStock,
+            effectiveAt: now,
+            createdAt: now,
+            note: 'مبنای موجودی پس از تغییر برنامه مصرف',
+          ),
+          effectiveAt: now,
+        );
+        return;
+      }
+
+      if (requestedBaselineChanged) {
+        await _insertInventoryEvent(
+          InventoryEvent(
+            id: _uuid.v4(),
+            medicationId: medication.id,
+            type: InventoryEventType.correction,
+            stockUnits: medication.stockAtRecord,
+            effectiveAt: requestedEffectiveAt,
+            createdAt: now,
+          ),
+          effectiveAt: requestedEffectiveAt,
         );
       }
     });
@@ -291,12 +349,29 @@ final class DriftMedicationRepository implements MedicationRepository {
       throw StateError('Unknown medication unit: ${medicationRow.unit}');
     }
 
+    final ConsumptionSchedule schedule;
+    final String? scheduleJson = medicationRow.consumptionScheduleJson;
+    if (scheduleJson == null) {
+      schedule = DailyConsumptionSchedule(
+        amountPerOccurrence: medicationRow.unitsPerDay,
+        occurrencesPerDay: 1,
+      );
+    } else {
+      try {
+        schedule = ConsumptionScheduleCodec.decode(scheduleJson);
+      } on FormatException catch (error) {
+        throw StateError(
+          'Invalid consumption schedule for ${medicationRow.id}: $error',
+        );
+      }
+    }
+
     return Medication(
       id: medicationRow.id,
       name: medicationRow.name,
       unit: unit,
       stockAtRecord: inventoryRow.stockUnits,
-      unitsPerDay: medicationRow.unitsPerDay,
+      consumptionSchedule: schedule,
       inventoryRecordedAt: inventoryRow.effectiveAt.toLocal(),
       alertLeadDays: medicationRow.alertLeadDays,
       notes: medicationRow.notes,

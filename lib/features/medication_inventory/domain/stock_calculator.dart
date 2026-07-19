@@ -1,5 +1,4 @@
-import 'dart:math' as math;
-
+import 'consumption_schedule_calculator.dart';
 import 'medication.dart';
 import 'medication_stock_snapshot.dart';
 
@@ -12,41 +11,32 @@ abstract final class StockCalculator {
   }) {
     final DateTime baseline = medication.inventoryRecordedAt;
     final DateTime effectiveNow = now.isBefore(baseline) ? baseline : now;
-    final double totalCoverageDays = _totalCoverageDays(medication);
-    final DateTime depletionAt = _depletionAt(
-      baseline: baseline,
-      totalCoverageDays: totalCoverageDays,
-      stockAtRecord: medication.stockAtRecord,
+    final ConsumptionScheduleProjection projection =
+        ConsumptionScheduleCalculator.project(
+          schedule: medication.consumptionSchedule,
+          baseline: baseline,
+          stockAtBaseline: medication.stockAtRecord,
+          now: effectiveNow,
+        );
+    final bool isDepleted =
+        !projection.depletionAt.isAfter(effectiveNow) ||
+        projection.estimatedRemainingUnits <= 0;
+    final double exactRemainingDays = isDepleted
+        ? 0
+        : projection.depletionAt.difference(effectiveNow).inMicroseconds /
+              Duration.microsecondsPerDay;
+    final DateTime reorderCandidate = projection.depletionAt.subtract(
+      Duration(days: medication.alertLeadDays),
     );
-
-    final bool depletedByTime = !depletionAt.isAfter(effectiveNow);
-    final double remainingUnits;
-    final double exactRemainingDays;
-
-    if (depletedByTime || medication.stockAtRecord == 0) {
-      remainingUnits = 0;
-      exactRemainingDays = 0;
-    } else {
-      final int elapsedMicroseconds = effectiveNow
-          .difference(baseline)
-          .inMicroseconds;
-      final double elapsedDays =
-          elapsedMicroseconds / Duration.microsecondsPerDay;
-      final double consumedUnits = elapsedDays * medication.unitsPerDay;
-      remainingUnits = math.max(0.0, medication.stockAtRecord - consumedUnits);
-      exactRemainingDays = remainingUnits / medication.unitsPerDay;
-    }
-
-    final bool isDepleted = depletedByTime || remainingUnits <= 0;
-    final DateTime reorderAt = medication.alertLeadDays >= totalCoverageDays
+    final DateTime reorderAt = reorderCandidate.isBefore(baseline)
         ? baseline
-        : depletionAt.subtract(Duration(days: medication.alertLeadDays));
+        : reorderCandidate;
 
     return MedicationStockSnapshot(
-      estimatedRemainingUnits: remainingUnits,
+      estimatedRemainingUnits: projection.estimatedRemainingUnits,
       exactRemainingDays: exactRemainingDays,
       fullRemainingDays: exactRemainingDays.floor(),
-      depletionAt: depletionAt,
+      depletionAt: projection.depletionAt,
       reorderAt: reorderAt,
       urgency: _resolveUrgency(
         isDepleted: isDepleted,
@@ -54,43 +44,6 @@ abstract final class StockCalculator {
         warningThresholdDays: medication.alertLeadDays,
       ),
     );
-  }
-
-  static double _totalCoverageDays(Medication medication) {
-    final double coverageDays =
-        medication.stockAtRecord / medication.unitsPerDay;
-    final double coverageMicroseconds =
-        coverageDays * Duration.microsecondsPerDay;
-
-    if (!coverageDays.isFinite || !coverageMicroseconds.isFinite) {
-      throw ArgumentError.value(
-        coverageDays,
-        'coverageDays',
-        'The medication coverage cannot be represented safely.',
-      );
-    }
-
-    return coverageDays;
-  }
-
-  static DateTime _depletionAt({
-    required DateTime baseline,
-    required double totalCoverageDays,
-    required double stockAtRecord,
-  }) {
-    final double coverageMicroseconds =
-        totalCoverageDays * Duration.microsecondsPerDay;
-    final int roundedCoverageMicroseconds = coverageMicroseconds.round();
-
-    try {
-      return baseline.add(Duration(microseconds: roundedCoverageMicroseconds));
-    } on ArgumentError {
-      throw ArgumentError.value(
-        stockAtRecord,
-        'stockAtRecord',
-        'The resulting depletion date is outside the supported range.',
-      );
-    }
   }
 
   static MedicationUrgency _resolveUrgency({
