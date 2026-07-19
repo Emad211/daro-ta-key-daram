@@ -17,7 +17,7 @@ void main() {
     );
 
     try {
-      await repository.upsert(
+      await repository.create(
         Medication(
           id: 'medication-1',
           name: 'متفورمین',
