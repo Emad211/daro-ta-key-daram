@@ -1,0 +1,50 @@
+--- a/lib/features/medication_inventory/presentation/screens/edit_medication_screen.dart
++++ b/lib/features/medication_inventory/presentation/screens/edit_medication_screen.dart
+@@ -3,6 +3,7 @@
+ import 'package:go_router/go_router.dart';
+ 
+ import '../../../../core/input/localized_number_parser.dart';
++import '../../application/medication_details_update.dart';
+ import '../../application/medication_repository.dart';
+ import '../../domain/consumption_schedule.dart';
+ import '../../domain/consumption_schedule_formatter.dart';
+@@ -216,30 +217,31 @@
+     setState(() => _isSaving = true);
+ 
+     try {
+-      final String notes = _notesController.text.trim();
+-      final Medication updated = widget.medication.copyWith(
++      final MedicationDetailsUpdate update = MedicationDetailsUpdate(
++        medicationId: widget.medication.id,
+         name: _nameController.text,
+         unit: _selectedUnit,
+         consumptionSchedule: schedule,
+         alertLeadDays: int.parse(
+           LocalizedNumberParser.normalize(_alertDaysController.text),
+         ),
+-        notes: notes,
+-        clearNotes: notes.isEmpty,
++        notes: _notesController.text,
+       );
+       final MedicationRepository repository = ref.read(
+         medicationRepositoryProvider,
+       );
+-      await repository.upsert(updated);
++      await repository.updateDetails(update);
+       ref.invalidate(activeMedicationsProvider);
+       ref.invalidate(archivedMedicationsProvider);
+-      ref.invalidate(medicationByIdProvider(updated.id));
+-      ref.invalidate(inventoryEventsProvider(updated.id));
++      ref.invalidate(medicationByIdProvider(update.medicationId));
++      ref.invalidate(inventoryEventsProvider(update.medicationId));
+ 
+       if (mounted) {
+         context.goNamed(
+           'medication-details',
+-          pathParameters: <String, String>{'medicationId': updated.id},
++          pathParameters: <String, String>{
++            'medicationId': update.medicationId,
++          },
+         );
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(
