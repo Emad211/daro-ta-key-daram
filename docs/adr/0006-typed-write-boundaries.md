@@ -26,3 +26,7 @@ When a schedule changes, the repository derives the current estimated quantity u
 - Quantity events preserve descriptive fields and schedule configuration.
 - SQLite and in-memory implementations must pass the same behavioral contract.
 - Notification synchronization occurs only after persistence succeeds.
+
+## Validation gates
+
+The change is accepted only after schema parity, canonical formatting, static analysis, the complete automated test suite, and a real Android debug build all pass on the same commit.
