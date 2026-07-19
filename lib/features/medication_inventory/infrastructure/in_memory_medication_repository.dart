@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../application/medication_details_update.dart';
 import '../application/medication_repository.dart';
 import '../domain/consumption_schedule.dart';
 import '../domain/inventory_event.dart';
@@ -120,78 +121,62 @@ class InMemoryMedicationRepository implements MedicationRepository {
   }
 
   @override
-  Future<void> upsert(Medication medication) async {
-    final int index = _items.indexWhere(
+  Future<void> create(Medication medication) async {
+    final bool exists = _items.any(
       (Medication item) => item.id == medication.id,
     );
+    if (exists) {
+      throw StateError('An aggregate with this identifier already exists.');
+    }
+
+    _items.add(medication);
+    _eventsByMedicationId[medication.id] = <InventoryEvent>[
+      _initialEventFor(medication),
+    ];
+    _inventoryChanges.add(medication.id);
+    _emit();
+  }
+
+  @override
+  Future<void> updateDetails(MedicationDetailsUpdate update) async {
+    final int index = _items.indexWhere(
+      (Medication item) => item.id == update.medicationId,
+    );
     if (index == -1) {
-      _items.add(medication);
-      _eventsByMedicationId[medication.id] = <InventoryEvent>[
-        _initialEventFor(medication),
-      ];
-      _inventoryChanges.add(medication.id);
-      _emit();
-      return;
+      throw StateError('The requested aggregate does not exist.');
     }
 
     final Medication previous = _items[index];
     final bool scheduleChanged =
-        previous.consumptionSchedule != medication.consumptionSchedule;
-    final bool baselineChanged =
-        previous.stockAtRecord != medication.stockAtRecord ||
-        previous.inventoryRecordedAt != medication.inventoryRecordedAt;
-    if (scheduleChanged && baselineChanged) {
-      throw ArgumentError(
-        'Change the consumption schedule and inventory baseline in separate '
-        'operations.',
-      );
-    }
+        previous.consumptionSchedule != update.consumptionSchedule;
+    Medication updated = update.applyTo(previous);
 
     if (scheduleChanged) {
       final DateTime now = _clock();
       final double currentEstimatedStock = previous
           .stockAt(now)
           .estimatedRemainingUnits;
-      _items[index] = medication.copyWith(
+      updated = updated.copyWith(
         stockAtRecord: currentEstimatedStock,
         inventoryRecordedAt: now,
       );
       final InventoryEvent change = InventoryEvent(
-        id: 'memory-schedule-${medication.id}-${now.microsecondsSinceEpoch}',
-        medicationId: medication.id,
+        id: 'memory-schedule-${update.medicationId}-${now.microsecondsSinceEpoch}',
+        medicationId: update.medicationId,
         type: InventoryEventType.scheduleChange,
         stockUnits: currentEstimatedStock,
         effectiveAt: now,
         createdAt: now,
-        note: 'مبنای موجودی پس از تغییر برنامه مصرف',
+        note: 'Boundary created after a schedule update',
       );
       _eventsByMedicationId
-          .putIfAbsent(medication.id, () => <InventoryEvent>[])
+          .putIfAbsent(update.medicationId, () => <InventoryEvent>[])
           .add(change);
-      _eventsByMedicationId[medication.id]?.sort(_newestFirst);
-      _inventoryChanges.add(medication.id);
-      _emit();
-      return;
+      _eventsByMedicationId[update.medicationId]?.sort(_newestFirst);
+      _inventoryChanges.add(update.medicationId);
     }
 
-    _items[index] = medication;
-    if (baselineChanged) {
-      final InventoryEvent correction = InventoryEvent(
-        id:
-            'memory-correction-${medication.id}-'
-            '${medication.inventoryRecordedAt.microsecondsSinceEpoch}',
-        medicationId: medication.id,
-        type: InventoryEventType.correction,
-        stockUnits: medication.stockAtRecord,
-        effectiveAt: medication.inventoryRecordedAt,
-        createdAt: medication.inventoryRecordedAt,
-      );
-      _eventsByMedicationId
-          .putIfAbsent(medication.id, () => <InventoryEvent>[])
-          .add(correction);
-      _eventsByMedicationId[medication.id]?.sort(_newestFirst);
-      _inventoryChanges.add(medication.id);
-    }
+    _items[index] = updated;
     _emit();
   }
 

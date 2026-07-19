@@ -1,3 +1,4 @@
+import 'package:daro_ta_key_daram/features/medication_inventory/application/medication_details_update.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/inventory_event.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication_unit.dart';
@@ -11,7 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final DateTime now = DateTime(2026, 7, 18, 8);
 
-  test('synchronizes notifications only after successful writes', () async {
+  test('synchronizes only after successful persisted commands', () async {
     final InMemoryMedicationRepository raw = InMemoryMedicationRepository();
     final _RecordingNotificationService notifications =
         _RecordingNotificationService();
@@ -31,8 +32,19 @@ void main() {
       inventoryRecordedAt: now,
     );
 
-    await repository.upsert(medication);
+    await repository.create(medication);
     expect(notifications.scheduled, hasLength(1));
+
+    await repository.updateDetails(
+      MedicationDetailsUpdate(
+        medicationId: medication.id,
+        name: 'متفورمین ۵۰۰',
+        unit: medication.unit,
+        consumptionSchedule: medication.consumptionSchedule,
+        alertLeadDays: 7,
+      ),
+    );
+    expect(notifications.scheduled, hasLength(2));
 
     await repository.recordInventoryEvent(
       InventoryEvent(
@@ -44,13 +56,13 @@ void main() {
         createdAt: now,
       ),
     );
-    expect(notifications.scheduled, hasLength(2));
+    expect(notifications.scheduled, hasLength(3));
 
     await repository.archive(medication.id);
     expect(notifications.cancelled, hasLength(1));
   });
 
-  test('does not schedule when persistence fails', () async {
+  test('does not synchronize when persistence fails', () async {
     final InMemoryMedicationRepository raw = InMemoryMedicationRepository();
     final _RecordingNotificationService notifications =
         _RecordingNotificationService();

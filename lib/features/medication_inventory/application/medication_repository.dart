@@ -1,5 +1,6 @@
 import '../domain/inventory_event.dart';
 import '../domain/medication.dart';
+import 'medication_details_update.dart';
 
 abstract interface class MedicationRepository {
   Stream<List<Medication>> watchActiveMedications();
@@ -10,7 +11,9 @@ abstract interface class MedicationRepository {
 
   Future<Medication?> findById(String medicationId);
 
-  Future<void> upsert(Medication medication);
+  Future<void> create(Medication medication);
+
+  Future<void> updateDetails(MedicationDetailsUpdate update);
 
   Future<void> recordInventoryEvent(InventoryEvent event);
 

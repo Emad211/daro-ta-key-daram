@@ -1,3 +1,4 @@
+import 'package:daro_ta_key_daram/features/medication_inventory/application/medication_details_update.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/consumption_schedule.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/inventory_event.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication.dart';
@@ -28,12 +29,17 @@ void main() {
             clock: () => changeTime,
           );
 
-      await repository.upsert(
-        initial.copyWith(
+      await repository.updateDetails(
+        MedicationDetailsUpdate(
+          medicationId: initial.id,
+          name: initial.name,
+          unit: initial.unit,
           consumptionSchedule: WeeklyConsumptionSchedule(
             amountPerOccurrence: 1,
             weekdays: <int>{DateTime.friday},
           ),
+          alertLeadDays: initial.alertLeadDays,
+          notes: initial.notes,
         ),
       );
 
@@ -45,8 +51,22 @@ void main() {
       expect(updated.stockAtRecord, 8);
       expect(updated.inventoryRecordedAt, changeTime);
       expect(events, hasLength(2));
-      expect(events.first.type, InventoryEventType.scheduleChange);
-      expect(events.first.stockUnits, 8);
+      expect(
+        events.where(
+          (InventoryEvent event) =>
+              event.type == InventoryEventType.scheduleChange,
+        ),
+        hasLength(1),
+      );
+      expect(
+        events
+            .singleWhere(
+              (InventoryEvent event) =>
+                  event.type == InventoryEventType.scheduleChange,
+            )
+            .stockUnits,
+        8,
+      );
     },
   );
 }

@@ -209,7 +209,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
       final MedicationRepository repository = ref.read(
         medicationRepositoryProvider,
       );
-      await repository.upsert(medication);
+      await repository.create(medication);
       ref.invalidate(activeMedicationsProvider);
 
       if (mounted) {
