@@ -2,7 +2,7 @@ name: Flutter CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, agent/structured-consumption-schedules]
   pull_request:
 
 permissions:
@@ -16,6 +16,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Export branch snapshot
+        if: github.ref == 'refs/heads/agent/structured-consumption-schedules'
+        run: |
+          tar --exclude=.git --exclude=.dart_tool --exclude=build \
+            -czf source-snapshot.tar.gz .
+
+      - name: Upload branch snapshot
+        if: github.ref == 'refs/heads/agent/structured-consumption-schedules'
+        uses: actions/upload-artifact@v4
+        with:
+          name: structured-schedule-source-snapshot
+          path: source-snapshot.tar.gz
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
