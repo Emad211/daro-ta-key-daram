@@ -15,51 +15,44 @@ void main() {
       expect(schedule.averageUnitsPerDay, 1.5);
       expect(schedule.kind, ConsumptionScheduleKind.daily);
       expect(
-        ConsumptionScheduleFormatter.describe(
-          schedule,
-          MedicationUnit.tablet,
-        ),
+        ConsumptionScheduleFormatter.describe(schedule, MedicationUnit.tablet),
         '0.5 قرص × 3 نوبت در روز',
       );
     });
 
-    test('every-N-days and weekly schedules derive only a compatibility rate', () {
-      final EveryNDaysConsumptionSchedule everyOtherDay =
-          EveryNDaysConsumptionSchedule(
-            amountPerOccurrence: 1,
-            intervalDays: 2,
-          );
-      final WeeklyConsumptionSchedule weekly = WeeklyConsumptionSchedule(
-        amountPerOccurrence: 1,
-        weekdays: <int>{DateTime.monday, DateTime.friday},
-      );
+    test(
+      'every-N-days and weekly schedules derive only a compatibility rate',
+      () {
+        final EveryNDaysConsumptionSchedule everyOtherDay =
+            EveryNDaysConsumptionSchedule(
+              amountPerOccurrence: 1,
+              intervalDays: 2,
+            );
+        final WeeklyConsumptionSchedule weekly = WeeklyConsumptionSchedule(
+          amountPerOccurrence: 1,
+          weekdays: <int>{DateTime.monday, DateTime.friday},
+        );
 
-      expect(everyOtherDay.averageUnitsPerDay, 0.5);
-      expect(weekly.averageUnitsPerDay, closeTo(2 / 7, 1e-12));
-      expect(
-        ConsumptionScheduleFormatter.describe(
-          everyOtherDay,
-          MedicationUnit.capsule,
-        ),
-        '1 کپسول هر 2 روز یک‌بار',
-      );
-      expect(
-        ConsumptionScheduleFormatter.describe(
-          weekly,
-          MedicationUnit.capsule,
-        ),
-        '1 کپسول در دوشنبه، جمعه',
-      );
-    });
+        expect(everyOtherDay.averageUnitsPerDay, 0.5);
+        expect(weekly.averageUnitsPerDay, closeTo(2 / 7, 1e-12));
+        expect(
+          ConsumptionScheduleFormatter.describe(
+            everyOtherDay,
+            MedicationUnit.capsule,
+          ),
+          '1 کپسول هر 2 روز یک‌بار',
+        );
+        expect(
+          ConsumptionScheduleFormatter.describe(weekly, MedicationUnit.capsule),
+          '1 کپسول در دوشنبه، جمعه',
+        );
+      },
+    );
 
     test('weekly weekdays are normalized and immutable', () {
       final WeeklyConsumptionSchedule schedule = WeeklyConsumptionSchedule(
         amountPerOccurrence: 1,
-        weekdays: <int>[
-          DateTime.friday,
-          DateTime.monday,
-          DateTime.friday,
-        ],
+        weekdays: <int>[DateTime.friday, DateTime.monday, DateTime.friday],
       );
 
       expect(schedule.weekdays, <int>[DateTime.monday, DateTime.friday]);
@@ -118,14 +111,8 @@ void main() {
 
   group('ConsumptionScheduleCodec', () {
     final List<ConsumptionSchedule> schedules = <ConsumptionSchedule>[
-      DailyConsumptionSchedule(
-        amountPerOccurrence: 0.5,
-        occurrencesPerDay: 2,
-      ),
-      EveryNDaysConsumptionSchedule(
-        amountPerOccurrence: 1.25,
-        intervalDays: 3,
-      ),
+      DailyConsumptionSchedule(amountPerOccurrence: 0.5, occurrencesPerDay: 2),
+      EveryNDaysConsumptionSchedule(amountPerOccurrence: 1.25, intervalDays: 3),
       WeeklyConsumptionSchedule(
         amountPerOccurrence: 1,
         weekdays: <int>{DateTime.saturday, DateTime.wednesday},

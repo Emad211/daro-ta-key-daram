@@ -179,7 +179,7 @@ final class DriftMedicationRepository implements MedicationRepository {
       }
 
       if (scheduleChanged) {
-        final double currentEstimatedStock = previousMedication!
+        final double currentEstimatedStock = previousMedication
             .stockAt(now.toLocal())
             .estimatedRemainingUnits;
         await _insertInventoryEvent(

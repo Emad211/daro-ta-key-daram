@@ -36,9 +36,7 @@ void main() {
             schedule: schedule,
             baseline: baseline,
             stockAtBaseline: 2,
-            now: baseline.add(
-              const Duration(hours: 12, microseconds: -1),
-            ),
+            now: baseline.add(const Duration(hours: 12, microseconds: -1)),
           );
       final ConsumptionScheduleProjection atFirst =
           ConsumptionScheduleCalculator.project(
@@ -58,10 +56,7 @@ void main() {
 
   group('every-N-days schedule', () {
     final EveryNDaysConsumptionSchedule schedule =
-        EveryNDaysConsumptionSchedule(
-          amountPerOccurrence: 1,
-          intervalDays: 2,
-        );
+        EveryNDaysConsumptionSchedule(amountPerOccurrence: 1, intervalDays: 2);
 
     test('keeps stock unchanged between discrete occurrences', () {
       final ConsumptionScheduleProjection dayOne =
@@ -92,26 +87,29 @@ void main() {
       expect(dayThree.depletionAt, baseline.add(const Duration(days: 6)));
     });
 
-    test('marks partial stock depleted at the first unsatisfied occurrence', () {
-      final ConsumptionScheduleProjection before =
-          ConsumptionScheduleCalculator.project(
-            schedule: schedule,
-            baseline: baseline,
-            stockAtBaseline: 0.5,
-            now: baseline.add(const Duration(days: 1)),
-          );
-      final ConsumptionScheduleProjection atOccurrence =
-          ConsumptionScheduleCalculator.project(
-            schedule: schedule,
-            baseline: baseline,
-            stockAtBaseline: 0.5,
-            now: baseline.add(const Duration(days: 2)),
-          );
+    test(
+      'marks partial stock depleted at the first unsatisfied occurrence',
+      () {
+        final ConsumptionScheduleProjection before =
+            ConsumptionScheduleCalculator.project(
+              schedule: schedule,
+              baseline: baseline,
+              stockAtBaseline: 0.5,
+              now: baseline.add(const Duration(days: 1)),
+            );
+        final ConsumptionScheduleProjection atOccurrence =
+            ConsumptionScheduleCalculator.project(
+              schedule: schedule,
+              baseline: baseline,
+              stockAtBaseline: 0.5,
+              now: baseline.add(const Duration(days: 2)),
+            );
 
-      expect(before.estimatedRemainingUnits, 0.5);
-      expect(atOccurrence.estimatedRemainingUnits, 0);
-      expect(atOccurrence.depletionAt, baseline.add(const Duration(days: 2)));
-    });
+        expect(before.estimatedRemainingUnits, 0.5);
+        expect(atOccurrence.estimatedRemainingUnits, 0);
+        expect(atOccurrence.depletionAt, baseline.add(const Duration(days: 2)));
+      },
+    );
   });
 
   group('selected weekdays schedule', () {

@@ -11,38 +11,41 @@ void main() {
   final DateTime baseline = DateTime.utc(2026, 7, 1, 8);
   final DateTime changeTime = DateTime.utc(2026, 7, 3, 8);
 
-  test('metadata-only update preserves schedule and inventory history', () async {
-    final AppDatabase database = AppDatabase(NativeDatabase.memory());
-    final DriftMedicationRepository repository = DriftMedicationRepository(
-      database,
-      clock: () => changeTime,
-    );
-    addTearDown(database.close);
+  test(
+    'metadata-only update preserves schedule and inventory history',
+    () async {
+      final AppDatabase database = AppDatabase(NativeDatabase.memory());
+      final DriftMedicationRepository repository = DriftMedicationRepository(
+        database,
+        clock: () => changeTime,
+      );
+      addTearDown(database.close);
 
-    final Medication initial = _dailyMedication(baseline);
-    await repository.upsert(initial);
+      final Medication initial = _dailyMedication(baseline);
+      await repository.upsert(initial);
 
-    await repository.upsert(
-      initial.copyWith(
-        name: 'متفورمین ۵۰۰',
-        unit: MedicationUnit.capsule,
-        alertLeadDays: 9,
-        clearNotes: true,
-      ),
-    );
+      await repository.upsert(
+        initial.copyWith(
+          name: 'متفورمین ۵۰۰',
+          unit: MedicationUnit.capsule,
+          alertLeadDays: 9,
+          clearNotes: true,
+        ),
+      );
 
-    final Medication? updated = await repository.findById(initial.id);
-    final List<InventoryEventRow> events = await database
-        .select(database.inventoryEvents)
-        .get();
+      final Medication? updated = await repository.findById(initial.id);
+      final List<InventoryEventRow> events = await database
+          .select(database.inventoryEvents)
+          .get();
 
-    expect(updated?.name, 'متفورمین ۵۰۰');
-    expect(updated?.unit, MedicationUnit.capsule);
-    expect(updated?.consumptionSchedule, initial.consumptionSchedule);
-    expect(updated?.alertLeadDays, 9);
-    expect(updated?.notes, isNull);
-    expect(events, hasLength(1));
-  });
+      expect(updated?.name, 'متفورمین ۵۰۰');
+      expect(updated?.unit, MedicationUnit.capsule);
+      expect(updated?.consumptionSchedule, initial.consumptionSchedule);
+      expect(updated?.alertLeadDays, 9);
+      expect(updated?.notes, isNull);
+      expect(events, hasLength(1));
+    },
+  );
 
   test('schedule change creates a new current-stock baseline', () async {
     final AppDatabase database = AppDatabase(NativeDatabase.memory());
@@ -70,10 +73,7 @@ void main() {
 
     expect(
       updated.consumptionSchedule,
-      EveryNDaysConsumptionSchedule(
-        amountPerOccurrence: 1,
-        intervalDays: 2,
-      ),
+      EveryNDaysConsumptionSchedule(amountPerOccurrence: 1, intervalDays: 2),
     );
     expect(updated.stockAtRecord, 8);
     expect(updated.inventoryRecordedAt.toUtc(), changeTime);

@@ -199,27 +199,31 @@ class _ConsumptionScheduleInputState extends State<ConsumptionScheduleInput> {
                     child: Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: _orderedWeekdays.map((int weekday) {
-                        final bool selected = _weekdays.contains(weekday);
-                        return FilterChip(
-                          key: Key('schedule-weekday-$weekday'),
-                          label: Text(
-                            ConsumptionScheduleFormatter.weekdayLabel(weekday),
-                          ),
-                          selected: selected,
-                          onSelected: (bool value) {
-                            setState(() {
-                              if (value) {
-                                _weekdays.add(weekday);
-                              } else {
-                                _weekdays.remove(weekday);
-                              }
-                            });
-                            field.didChange(Set<int>.of(_weekdays));
-                            _emit();
-                          },
-                        );
-                      }).toList(growable: false),
+                      children: _orderedWeekdays
+                          .map((int weekday) {
+                            final bool selected = _weekdays.contains(weekday);
+                            return FilterChip(
+                              key: Key('schedule-weekday-$weekday'),
+                              label: Text(
+                                ConsumptionScheduleFormatter.weekdayLabel(
+                                  weekday,
+                                ),
+                              ),
+                              selected: selected,
+                              onSelected: (bool value) {
+                                setState(() {
+                                  if (value) {
+                                    _weekdays.add(weekday);
+                                  } else {
+                                    _weekdays.remove(weekday);
+                                  }
+                                });
+                                field.didChange(Set<int>.of(_weekdays));
+                                _emit();
+                              },
+                            );
+                          })
+                          .toList(growable: false),
                     ),
                   );
                 },
@@ -241,7 +245,11 @@ class _ConsumptionScheduleInputState extends State<ConsumptionScheduleInput> {
     DateTime.friday,
   ];
 
-  String? _validateInteger(String? value, {required int min, required int max}) {
+  String? _validateInteger(
+    String? value, {
+    required int min,
+    required int max,
+  }) {
     final int? number = int.tryParse(LocalizedNumberParser.normalize(value));
     if (number == null || number < min || number > max) {
       return 'عدد صحیح بین $min تا $max وارد کنید.';

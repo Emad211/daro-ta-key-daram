@@ -84,8 +84,10 @@ void main() {
     final AppDatabase database = AppDatabase(NativeDatabase(file));
     addTearDown(database.close);
 
-    final MedicationRow row = await database.select(database.medications).getSingle();
-    final QueryRow versionRow = await database
+    final MedicationRow row = await database
+        .select(database.medications)
+        .getSingle();
+    final versionRow = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
     final ConsumptionSchedule schedule = ConsumptionScheduleCodec.decode(
@@ -96,10 +98,7 @@ void main() {
     expect(row.unitsPerDay, 1.5);
     expect(
       schedule,
-      DailyConsumptionSchedule(
-        amountPerOccurrence: 1.5,
-        occurrencesPerDay: 1,
-      ),
+      DailyConsumptionSchedule(amountPerOccurrence: 1.5, occurrencesPerDay: 1),
     );
   });
 }

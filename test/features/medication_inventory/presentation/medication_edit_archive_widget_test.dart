@@ -55,44 +55,42 @@ void main() {
     expect(events, hasLength(1));
   });
 
-  testWidgets('changes to an every-N-days schedule after explicit confirmation', (
-    WidgetTester tester,
-  ) async {
-    final Medication medication = _medication(now);
-    final InMemoryMedicationRepository repository =
-        InMemoryMedicationRepository(
-          seed: <Medication>[medication],
-          clock: () => now,
-        );
+  testWidgets(
+    'changes to an every-N-days schedule after explicit confirmation',
+    (WidgetTester tester) async {
+      final Medication medication = _medication(now);
+      final InMemoryMedicationRepository repository =
+          InMemoryMedicationRepository(
+            seed: <Medication>[medication],
+            clock: () => now,
+          );
 
-    appRouter.go('/medications/${medication.id}/edit');
-    await _pumpApp(tester, repository, now);
+      appRouter.go('/medications/${medication.id}/edit');
+      await _pumpApp(tester, repository, now);
 
-    await tester.tap(find.byKey(const Key('schedule-kind')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('هر چند روز یک‌بار').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('save-medication-metadata')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('schedule-kind')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('هر چند روز یک‌بار').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('save-medication-metadata')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('تغییر برنامه مصرف؟'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('confirm-schedule-change')));
-    await tester.pumpAndSettle();
+      expect(find.text('تغییر برنامه مصرف؟'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('confirm-schedule-change')));
+      await tester.pumpAndSettle();
 
-    final Medication updated = (await repository.findById(medication.id))!;
-    final List<InventoryEvent> events = await repository
-        .watchInventoryEvents(medication.id)
-        .first;
-    expect(
-      updated.consumptionSchedule,
-      EveryNDaysConsumptionSchedule(
-        amountPerOccurrence: 1,
-        intervalDays: 2,
-      ),
-    );
-    expect(events, hasLength(2));
-    expect(events.first.type, InventoryEventType.scheduleChange);
-  });
+      final Medication updated = (await repository.findById(medication.id))!;
+      final List<InventoryEvent> events = await repository
+          .watchInventoryEvents(medication.id)
+          .first;
+      expect(
+        updated.consumptionSchedule,
+        EveryNDaysConsumptionSchedule(amountPerOccurrence: 1, intervalDays: 2),
+      );
+      expect(events, hasLength(2));
+      expect(events.first.type, InventoryEventType.scheduleChange);
+    },
+  );
 
   testWidgets('creates a selected-weekday schedule without decimal averaging', (
     WidgetTester tester,
@@ -107,17 +105,12 @@ void main() {
       find.byKey(const Key('add-medication-name')),
       'ویتامین D',
     );
-    await tester.enterText(
-      find.byKey(const Key('add-medication-stock')),
-      '۴',
-    );
+    await tester.enterText(find.byKey(const Key('add-medication-stock')), '۴');
     await tester.tap(find.byKey(const Key('schedule-kind')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('روزهای مشخص هفته').last);
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const Key('schedule-weekday-5')),
-    );
+    await tester.tap(find.byKey(const Key('schedule-weekday-5')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('save-new-medication')));
     await tester.pumpAndSettle();
@@ -152,6 +145,15 @@ void main() {
     expect(await repository.watchArchivedMedications().first, isEmpty);
     expect(await repository.watchActiveMedications().first, hasLength(1));
   });
+}
+
+Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(
+    finder,
+    260,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
 }
 
 Future<void> _pumpApp(

@@ -60,27 +60,30 @@ void main() {
       expect(dayThree.depletionAt, baseline.add(const Duration(days: 6)));
     });
 
-    test('weekly schedule uses selected weekdays rather than a daily average', () {
-      final Medication medication = _medication(
-        baseline: baseline,
-        stock: 3,
-        schedule: WeeklyConsumptionSchedule(
-          amountPerOccurrence: 1,
-          weekdays: <int>{DateTime.monday, DateTime.friday},
-        ),
-      );
+    test(
+      'weekly schedule uses selected weekdays rather than a daily average',
+      () {
+        final Medication medication = _medication(
+          baseline: baseline,
+          stock: 3,
+          schedule: WeeklyConsumptionSchedule(
+            amountPerOccurrence: 1,
+            weekdays: <int>{DateTime.monday, DateTime.friday},
+          ),
+        );
 
-      final MedicationStockSnapshot thursday = medication.stockAt(
-        DateTime.utc(2026, 7, 2, 8),
-      );
-      final MedicationStockSnapshot friday = medication.stockAt(
-        DateTime.utc(2026, 7, 3, 8),
-      );
+        final MedicationStockSnapshot thursday = medication.stockAt(
+          DateTime.utc(2026, 7, 2, 8),
+        );
+        final MedicationStockSnapshot friday = medication.stockAt(
+          DateTime.utc(2026, 7, 3, 8),
+        );
 
-      expect(thursday.estimatedRemainingUnits, 3);
-      expect(friday.estimatedRemainingUnits, 2);
-      expect(friday.depletionAt, DateTime.utc(2026, 7, 10, 8));
-    });
+        expect(thursday.estimatedRemainingUnits, 3);
+        expect(friday.estimatedRemainingUnits, 2);
+        expect(friday.depletionAt, DateTime.utc(2026, 7, 10, 8));
+      },
+    );
 
     test('partial stock becomes depleted at an unsatisfied occurrence', () {
       final Medication medication = _medication(
@@ -189,11 +192,7 @@ void main() {
         stock: 12.5,
         schedule: WeeklyConsumptionSchedule(
           amountPerOccurrence: 0.5,
-          weekdays: <int>{
-            DateTime.monday,
-            DateTime.wednesday,
-            DateTime.friday,
-          },
+          weekdays: <int>{DateTime.monday, DateTime.wednesday, DateTime.friday},
         ),
       );
       double previous = double.infinity;
