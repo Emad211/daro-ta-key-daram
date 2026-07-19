@@ -71,9 +71,11 @@ class InMemoryMedicationRepository implements MedicationRepository {
 
   @override
   Future<void> deletePermanently(String medicationId) async {
-    _items.removeWhere(
-      (Medication medication) => medication.id == medicationId,
-    );
+    final int index = _indexOf(medicationId);
+    if (index == -1) {
+      throw StateError('The requested aggregate does not exist.');
+    }
+    _items.removeAt(index);
     _eventsByMedicationId.remove(medicationId);
     _emit();
     _inventoryChanges.add(medicationId);
@@ -81,23 +83,27 @@ class InMemoryMedicationRepository implements MedicationRepository {
 
   @override
   Future<Medication?> findById(String medicationId) async {
-    for (final Medication medication in _items) {
-      if (medication.id == medicationId) {
-        return medication;
-      }
-    }
-    return null;
+    final int index = _indexOf(medicationId);
+    return index == -1 ? null : _items[index];
   }
 
   @override
   Future<void> recordInventoryEvent(InventoryEvent event) async {
-    final int index = _items.indexWhere(
-      (Medication medication) => medication.id == event.medicationId,
-    );
+    final int index = _indexOf(event.medicationId);
     if (index == -1) {
-      throw StateError(
-        'Cannot create inventory event for a missing medication.',
+      throw StateError('The requested aggregate does not exist.');
+    }
+    final Medication current = _items[index];
+    _requireActive(current);
+    if (event.effectiveAt.isAfter(_clock())) {
+      throw ArgumentError.value(
+        event.effectiveAt,
+        'event.effectiveAt',
+        'An event cannot become effective in the future.',
       );
+    }
+    if (_containsEventId(event.id)) {
+      throw StateError('An event with this identifier already exists.');
     }
 
     final List<InventoryEvent> events = _eventsByMedicationId.putIfAbsent(
@@ -107,7 +113,7 @@ class InMemoryMedicationRepository implements MedicationRepository {
     events.add(event);
     events.sort(_newestFirst);
 
-    _items[index] = _items[index].copyWith(
+    _items[index] = current.copyWith(
       stockAtRecord: event.stockUnits,
       inventoryRecordedAt: event.effectiveAt,
     );
@@ -122,10 +128,21 @@ class InMemoryMedicationRepository implements MedicationRepository {
 
   @override
   Future<void> create(Medication medication) async {
-    final bool exists = _items.any(
-      (Medication item) => item.id == medication.id,
-    );
-    if (exists) {
+    if (medication.isArchived) {
+      throw ArgumentError.value(
+        medication.isArchived,
+        'medication.isArchived',
+        'A new aggregate must start active.',
+      );
+    }
+    if (medication.inventoryRecordedAt.isAfter(_clock())) {
+      throw ArgumentError.value(
+        medication.inventoryRecordedAt,
+        'medication.inventoryRecordedAt',
+        'The initial baseline cannot become effective in the future.',
+      );
+    }
+    if (_indexOf(medication.id) != -1) {
       throw StateError('An aggregate with this identifier already exists.');
     }
 
@@ -139,14 +156,13 @@ class InMemoryMedicationRepository implements MedicationRepository {
 
   @override
   Future<void> updateDetails(MedicationDetailsUpdate update) async {
-    final int index = _items.indexWhere(
-      (Medication item) => item.id == update.medicationId,
-    );
+    final int index = _indexOf(update.medicationId);
     if (index == -1) {
       throw StateError('The requested aggregate does not exist.');
     }
 
     final Medication previous = _items[index];
+    _requireActive(previous);
     final bool scheduleChanged =
         previous.consumptionSchedule != update.consumptionSchedule;
     Medication updated = update.applyTo(previous);
@@ -169,6 +185,9 @@ class InMemoryMedicationRepository implements MedicationRepository {
         createdAt: now,
         note: 'Boundary created after a schedule update',
       );
+      if (_containsEventId(change.id)) {
+        throw StateError('An event with this identifier already exists.');
+      }
       _eventsByMedicationId
           .putIfAbsent(update.medicationId, () => <InventoryEvent>[])
           .add(change);
@@ -204,6 +223,25 @@ class InMemoryMedicationRepository implements MedicationRepository {
     }
   }
 
+  int _indexOf(String medicationId) {
+    return _items.indexWhere(
+      (Medication medication) => medication.id == medicationId,
+    );
+  }
+
+  bool _containsEventId(String eventId) {
+    return _eventsByMedicationId.values.any(
+      (List<InventoryEvent> events) =>
+          events.any((InventoryEvent event) => event.id == eventId),
+    );
+  }
+
+  void _requireActive(Medication medication) {
+    if (medication.isArchived) {
+      throw StateError('Archived aggregates are read-only.');
+    }
+  }
+
   void _emit() {
     _changes.add(_activeSnapshot);
   }
@@ -223,11 +261,12 @@ class InMemoryMedicationRepository implements MedicationRepository {
   }
 
   void _setArchived({required String medicationId, required bool isArchived}) {
-    final int index = _items.indexWhere(
-      (Medication medication) => medication.id == medicationId,
-    );
+    final int index = _indexOf(medicationId);
     if (index == -1) {
-      throw StateError('Medication $medicationId does not exist.');
+      throw StateError('The requested aggregate does not exist.');
+    }
+    if (_items[index].isArchived == isArchived) {
+      return;
     }
     _items[index] = _items[index].copyWith(isArchived: isArchived);
     _emit();
