@@ -1,3 +1,4 @@
+import 'package:daro_ta_key_daram/features/medication_inventory/domain/consumption_schedule.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication_stock_snapshot.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication_unit.dart';
@@ -5,292 +6,232 @@ import 'package:daro_ta_key_daram/features/medication_inventory/domain/stock_cal
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('StockCalculator', () {
-    final DateTime recordedAt = DateTime.utc(2026, 7, 18, 8);
+  group('StockCalculator with structured schedules', () {
+    final DateTime baseline = DateTime.utc(2026, 7, 1, 8);
 
-    test('calculates 15 full days for 30 tablets at 2 per day', () {
+    test('daily multiple occurrences keep stock and time consistent', () {
       final Medication medication = _medication(
-        id: 'm1',
-        stockAtRecord: 30,
-        unitsPerDay: 2,
-        recordedAt: recordedAt,
+        baseline: baseline,
+        stock: 4,
+        schedule: DailyConsumptionSchedule(
+          amountPerOccurrence: 1,
+          occurrencesPerDay: 2,
+        ),
       );
 
-      final MedicationStockSnapshot snapshot = medication.stockAt(recordedAt);
+      final MedicationStockSnapshot initial = medication.stockAt(baseline);
+      final MedicationStockSnapshot afterFirst = medication.stockAt(
+        baseline.add(const Duration(hours: 12)),
+      );
 
-      expect(snapshot.estimatedRemainingUnits, 30);
-      expect(snapshot.exactRemainingDays, 15);
-      expect(snapshot.fullRemainingDays, 15);
-      expect(snapshot.depletionAt, DateTime.utc(2026, 8, 2, 8));
-      expect(snapshot.reorderAt, DateTime.utc(2026, 7, 28, 8));
-      expect(snapshot.urgency, MedicationUrgency.safe);
+      expect(initial.estimatedRemainingUnits, 4);
+      expect(initial.exactRemainingDays, 2);
+      expect(initial.fullRemainingDays, 2);
+      expect(initial.depletionAt, baseline.add(const Duration(days: 2)));
+      expect(afterFirst.estimatedRemainingUnits, 3);
+      expect(afterFirst.exactRemainingDays, 1.5);
+      expect(afterFirst.fullRemainingDays, 1);
     });
 
-    test('uses sub-minute precision for partial-day coverage', () {
+    test('every-other-day stock remains discrete between occurrences', () {
       final Medication medication = _medication(
-        id: 'sub-minute',
-        stockAtRecord: 1,
-        unitsPerDay: 2880,
-        recordedAt: recordedAt,
+        baseline: baseline,
+        stock: 3,
+        schedule: EveryNDaysConsumptionSchedule(
+          amountPerOccurrence: 1,
+          intervalDays: 2,
+        ),
       );
 
-      final MedicationStockSnapshot initial = medication.stockAt(recordedAt);
-      final MedicationStockSnapshot halfway = medication.stockAt(
-        recordedAt.add(const Duration(seconds: 15)),
+      final MedicationStockSnapshot dayOne = medication.stockAt(
+        baseline.add(const Duration(days: 1)),
+      );
+      final MedicationStockSnapshot dayTwo = medication.stockAt(
+        baseline.add(const Duration(days: 2)),
+      );
+      final MedicationStockSnapshot dayThree = medication.stockAt(
+        baseline.add(const Duration(days: 3)),
       );
 
-      expect(initial.depletionAt, recordedAt.add(const Duration(seconds: 30)));
-      expect(halfway.estimatedRemainingUnits, closeTo(0.5, 1e-12));
-      expect(
-        halfway.exactRemainingDays,
-        closeTo(15 / Duration.secondsPerDay, 1e-12),
-      );
+      expect(dayOne.estimatedRemainingUnits, 3);
+      expect(dayTwo.estimatedRemainingUnits, 2);
+      expect(dayThree.estimatedRemainingUnits, 2);
+      expect(dayThree.exactRemainingDays, 3);
+      expect(dayThree.depletionAt, baseline.add(const Duration(days: 6)));
     });
 
-    test('does not round exact days across a full-day boundary', () {
+    test('weekly schedule uses selected weekdays rather than a daily average', () {
       final Medication medication = _medication(
-        id: 'rounding-boundary',
-        stockAtRecord: 2,
-        unitsPerDay: 1,
-        recordedAt: recordedAt,
-      );
-      final DateTime now = recordedAt.add(
-        const Duration(days: 1, seconds: 34, milliseconds: 560),
+        baseline: baseline,
+        stock: 3,
+        schedule: WeeklyConsumptionSchedule(
+          amountPerOccurrence: 1,
+          weekdays: <int>{DateTime.monday, DateTime.friday},
+        ),
       );
 
-      final MedicationStockSnapshot snapshot = medication.stockAt(now);
+      final MedicationStockSnapshot thursday = medication.stockAt(
+        DateTime.utc(2026, 7, 2, 8),
+      );
+      final MedicationStockSnapshot friday = medication.stockAt(
+        DateTime.utc(2026, 7, 3, 8),
+      );
 
-      expect(snapshot.exactRemainingDays, closeTo(0.9996, 1e-12));
-      expect(snapshot.fullRemainingDays, 0);
+      expect(thursday.estimatedRemainingUnits, 3);
+      expect(friday.estimatedRemainingUnits, 2);
+      expect(friday.depletionAt, DateTime.utc(2026, 7, 10, 8));
     });
 
-    test('never returns negative values at or after depletion', () {
+    test('partial stock becomes depleted at an unsatisfied occurrence', () {
       final Medication medication = _medication(
-        id: 'depletion-boundary',
-        stockAtRecord: 10,
-        unitsPerDay: 2,
-        recordedAt: recordedAt,
-      );
-      final DateTime depletionAt = medication.stockAt(recordedAt).depletionAt;
-
-      final MedicationStockSnapshot justBefore = medication.stockAt(
-        depletionAt.subtract(const Duration(microseconds: 1)),
-      );
-      final MedicationStockSnapshot atDepletion = medication.stockAt(
-        depletionAt,
-      );
-      final MedicationStockSnapshot afterDepletion = medication.stockAt(
-        depletionAt.add(const Duration(days: 10)),
+        baseline: baseline,
+        stock: 0.5,
+        schedule: EveryNDaysConsumptionSchedule(
+          amountPerOccurrence: 1,
+          intervalDays: 2,
+        ),
       );
 
-      expect(justBefore.estimatedRemainingUnits, greaterThan(0));
-      expect(justBefore.urgency, MedicationUrgency.critical);
-      for (final MedicationStockSnapshot snapshot in <MedicationStockSnapshot>[
-        atDepletion,
-        afterDepletion,
-      ]) {
-        expect(snapshot.estimatedRemainingUnits, 0);
-        expect(snapshot.exactRemainingDays, 0);
-        expect(snapshot.fullRemainingDays, 0);
-        expect(snapshot.urgency, MedicationUrgency.depleted);
-      }
+      final MedicationStockSnapshot before = medication.stockAt(
+        baseline.add(const Duration(days: 1)),
+      );
+      final MedicationStockSnapshot atOccurrence = medication.stockAt(
+        baseline.add(const Duration(days: 2)),
+      );
+
+      expect(before.estimatedRemainingUnits, 0.5);
+      expect(before.urgency, MedicationUrgency.critical);
+      expect(atOccurrence.estimatedRemainingUnits, 0);
+      expect(atOccurrence.exactRemainingDays, 0);
+      expect(atOccurrence.urgency, MedicationUrgency.depleted);
     });
 
-    test('supports fractional daily use', () {
+    test('warning and critical boundaries use time until depletion', () {
       final Medication medication = _medication(
-        id: 'weekly',
-        stockAtRecord: 4,
-        unitsPerDay: 1 / 7,
-        recordedAt: recordedAt,
+        baseline: baseline,
+        stock: 10,
         alertLeadDays: 7,
+        schedule: DailyConsumptionSchedule(
+          amountPerOccurrence: 1,
+          occurrencesPerDay: 1,
+        ),
       );
 
-      final MedicationStockSnapshot snapshot = medication.stockAt(recordedAt);
-
-      expect(snapshot.exactRemainingDays, closeTo(28, 1e-12));
-      expect(snapshot.depletionAt, DateTime.utc(2026, 8, 15, 8));
-      expect(snapshot.reorderAt, DateTime.utc(2026, 8, 8, 8));
-    });
-
-    test('does not consume stock when device time is before record time', () {
-      final Medication medication = _medication(
-        id: 'clock-test',
-        stockAtRecord: 10,
-        unitsPerDay: 1,
-        recordedAt: recordedAt,
-      );
-
-      final MedicationStockSnapshot snapshot = medication.stockAt(
-        recordedAt.subtract(const Duration(days: 2)),
-      );
-
-      expect(snapshot.estimatedRemainingUnits, 10);
-      expect(snapshot.exactRemainingDays, 10);
-      expect(snapshot.depletionAt, recordedAt.add(const Duration(days: 10)));
-    });
-
-    test('clamps reorder time to the inventory baseline', () {
-      final Medication medication = _medication(
-        id: 'short-coverage',
-        stockAtRecord: 2,
-        unitsPerDay: 1,
-        recordedAt: recordedAt,
-      );
-
-      final MedicationStockSnapshot snapshot = medication.stockAt(recordedAt);
-
-      expect(snapshot.reorderAt, recordedAt);
-      expect(snapshot.reorderAt.isAfter(snapshot.depletionAt), isFalse);
-    });
-
-    test('applies warning and critical thresholds at exact boundaries', () {
-      final Medication medication = _medication(
-        id: 'urgency-thresholds',
-        stockAtRecord: 10,
-        unitsPerDay: 1,
-        recordedAt: recordedAt,
-        alertLeadDays: 7,
-      );
-
-      expect(medication.stockAt(recordedAt).urgency, MedicationUrgency.safe);
+      expect(medication.stockAt(baseline).urgency, MedicationUrgency.safe);
       expect(
-        medication.stockAt(recordedAt.add(const Duration(days: 3))).urgency,
+        medication.stockAt(baseline.add(const Duration(days: 3))).urgency,
         MedicationUrgency.warning,
       );
       expect(
-        medication
-            .stockAt(
-              recordedAt
-                  .add(const Duration(days: 7))
-                  .subtract(const Duration(microseconds: 1)),
-            )
-            .urgency,
-        MedicationUrgency.warning,
-      );
-      expect(
-        medication.stockAt(recordedAt.add(const Duration(days: 7))).urgency,
+        medication.stockAt(baseline.add(const Duration(days: 7))).urgency,
         MedicationUrgency.critical,
       );
       expect(StockCalculator.criticalThresholdDays, 3);
     });
 
-    test('zero stock is depleted immediately with a safe reorder bound', () {
+    test('reorder time is clamped to the inventory baseline', () {
       final Medication medication = _medication(
-        id: 'zero-stock',
-        stockAtRecord: 0,
-        unitsPerDay: 1,
-        recordedAt: recordedAt,
+        baseline: baseline,
+        stock: 1,
         alertLeadDays: 30,
+        schedule: WeeklyConsumptionSchedule(
+          amountPerOccurrence: 1,
+          weekdays: <int>{DateTime.friday},
+        ),
       );
 
-      final MedicationStockSnapshot snapshot = medication.stockAt(recordedAt);
+      final MedicationStockSnapshot snapshot = medication.stockAt(baseline);
+
+      expect(snapshot.reorderAt, baseline);
+      expect(snapshot.reorderAt.isAfter(snapshot.depletionAt), isFalse);
+    });
+
+    test('zero stock is depleted immediately', () {
+      final Medication medication = _medication(
+        baseline: baseline,
+        stock: 0,
+        schedule: DailyConsumptionSchedule(
+          amountPerOccurrence: 1,
+          occurrencesPerDay: 1,
+        ),
+      );
+
+      final MedicationStockSnapshot snapshot = medication.stockAt(baseline);
 
       expect(snapshot.estimatedRemainingUnits, 0);
       expect(snapshot.exactRemainingDays, 0);
-      expect(snapshot.depletionAt, recordedAt);
-      expect(snapshot.reorderAt, recordedAt);
+      expect(snapshot.depletionAt, baseline);
+      expect(snapshot.reorderAt, baseline);
       expect(snapshot.urgency, MedicationUrgency.depleted);
     });
 
-    test('remaining stock is finite, non-negative, and monotonic', () {
+    test('time before the baseline does not consume stock', () {
       final Medication medication = _medication(
-        id: 'monotonic',
-        stockAtRecord: 100.5,
-        unitsPerDay: 2.75,
-        recordedAt: recordedAt,
-        alertLeadDays: 9,
+        baseline: baseline,
+        stock: 4,
+        schedule: EveryNDaysConsumptionSchedule(
+          amountPerOccurrence: 1,
+          intervalDays: 2,
+        ),
       );
-      double previousUnits = double.infinity;
-      double previousDays = double.infinity;
 
-      for (int hours = -24; hours <= 24 * 50; hours += 3) {
+      final MedicationStockSnapshot snapshot = medication.stockAt(
+        baseline.subtract(const Duration(days: 50)),
+      );
+
+      expect(snapshot.estimatedRemainingUnits, 4);
+      expect(snapshot.depletionAt, baseline.add(const Duration(days: 8)));
+    });
+
+    test('remaining stock is finite, non-negative and monotonic', () {
+      final Medication medication = _medication(
+        baseline: baseline,
+        stock: 12.5,
+        schedule: WeeklyConsumptionSchedule(
+          amountPerOccurrence: 0.5,
+          weekdays: <int>{
+            DateTime.monday,
+            DateTime.wednesday,
+            DateTime.friday,
+          },
+        ),
+      );
+      double previous = double.infinity;
+
+      for (int hours = -24; hours <= 24 * 90; hours += 3) {
         final MedicationStockSnapshot snapshot = medication.stockAt(
-          recordedAt.add(Duration(hours: hours)),
+          baseline.add(Duration(hours: hours)),
         );
-
         expect(snapshot.estimatedRemainingUnits.isFinite, isTrue);
         expect(snapshot.exactRemainingDays.isFinite, isTrue);
         expect(snapshot.estimatedRemainingUnits, greaterThanOrEqualTo(0));
         expect(snapshot.exactRemainingDays, greaterThanOrEqualTo(0));
         expect(
           snapshot.estimatedRemainingUnits,
-          lessThanOrEqualTo(previousUnits + 1e-10),
-        );
-        expect(
-          snapshot.exactRemainingDays,
-          lessThanOrEqualTo(previousDays + 1e-10),
+          lessThanOrEqualTo(previous + 1e-12),
         );
         expect(snapshot.fullRemainingDays, snapshot.exactRemainingDays.floor());
-        expect(snapshot.reorderAt.isBefore(recordedAt), isFalse);
+        expect(snapshot.reorderAt.isBefore(baseline), isFalse);
         expect(snapshot.reorderAt.isAfter(snapshot.depletionAt), isFalse);
-
-        previousUnits = snapshot.estimatedRemainingUnits;
-        previousDays = snapshot.exactRemainingDays;
+        previous = snapshot.estimatedRemainingUnits;
       }
-    });
-
-    test('rejects invalid stock and daily-use inputs', () {
-      for (final double invalidStock in <double>[
-        -1,
-        double.nan,
-        double.infinity,
-      ]) {
-        expect(
-          () => _medication(
-            id: 'invalid-stock-$invalidStock',
-            stockAtRecord: invalidStock,
-            unitsPerDay: 1,
-            recordedAt: recordedAt,
-          ),
-          throwsArgumentError,
-        );
-      }
-
-      for (final double invalidDailyUse in <double>[
-        0,
-        -1,
-        double.nan,
-        double.infinity,
-      ]) {
-        expect(
-          () => _medication(
-            id: 'invalid-use-$invalidDailyUse',
-            stockAtRecord: 10,
-            unitsPerDay: invalidDailyUse,
-            recordedAt: recordedAt,
-          ),
-          throwsArgumentError,
-        );
-      }
-    });
-
-    test('rejects coverage that cannot be represented safely', () {
-      final Medication medication = _medication(
-        id: 'overflow',
-        stockAtRecord: 1e300,
-        unitsPerDay: 1e-300,
-        recordedAt: recordedAt,
-      );
-
-      expect(() => medication.stockAt(recordedAt), throwsArgumentError);
     });
   });
 }
 
 Medication _medication({
-  required String id,
-  required double stockAtRecord,
-  required double unitsPerDay,
-  required DateTime recordedAt,
+  required DateTime baseline,
+  required double stock,
+  required ConsumptionSchedule schedule,
   int alertLeadDays = 5,
 }) {
   return Medication(
-    id: id,
+    id: 'medication-1',
     name: 'Test medication',
     unit: MedicationUnit.tablet,
-    stockAtRecord: stockAtRecord,
-    unitsPerDay: unitsPerDay,
-    inventoryRecordedAt: recordedAt,
+    stockAtRecord: stock,
+    consumptionSchedule: schedule,
+    inventoryRecordedAt: baseline,
     alertLeadDays: alertLeadDays,
   );
 }

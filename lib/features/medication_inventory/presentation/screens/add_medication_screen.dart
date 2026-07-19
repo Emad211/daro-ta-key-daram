@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/input/localized_number_parser.dart';
 import '../../application/medication_repository.dart';
+import '../../domain/consumption_schedule.dart';
 import '../../domain/medication.dart';
 import '../../domain/medication_unit.dart';
 import '../providers/medication_providers.dart';
+import '../widgets/consumption_schedule_input.dart';
 
 class AddMedicationScreen extends ConsumerStatefulWidget {
   const AddMedicationScreen({super.key});
@@ -20,20 +23,22 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _stockController = TextEditingController();
-  final TextEditingController _dailyUseController = TextEditingController();
   final TextEditingController _alertDaysController = TextEditingController(
     text: '5',
   );
   final TextEditingController _notesController = TextEditingController();
 
   MedicationUnit _selectedUnit = MedicationUnit.tablet;
+  ConsumptionSchedule? _consumptionSchedule = DailyConsumptionSchedule(
+    amountPerOccurrence: 1,
+    occurrencesPerDay: 1,
+  );
   bool _isSaving = false;
 
   @override
   void dispose() {
     _nameController.dispose();
     _stockController.dispose();
-    _dailyUseController.dispose();
     _alertDaysController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -49,9 +54,10 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
-              _DisclaimerCard(),
+              const _DisclaimerCard(),
               const SizedBox(height: 18),
               TextFormField(
+                key: const Key('add-medication-name'),
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
@@ -60,10 +66,11 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                   prefixIcon: Icon(Icons.medication_outlined),
                 ),
                 validator: (String? value) {
-                  if (value == null || value.trim().isEmpty) {
+                  final String normalized = value?.trim() ?? '';
+                  if (normalized.isEmpty) {
                     return 'نام دارو را وارد کنید.';
                   }
-                  if (value.trim().length > 80) {
+                  if (normalized.length > 80) {
                     return 'نام دارو بیش از حد طولانی است.';
                   }
                   return null;
@@ -71,6 +78,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<MedicationUnit>(
+                key: const Key('add-medication-unit'),
                 initialValue: _selectedUnit,
                 decoration: const InputDecoration(
                   labelText: 'واحد موجودی',
@@ -91,42 +99,39 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                 },
               ),
               const SizedBox(height: 14),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(
-                    child: TextFormField(
-                      controller: _stockController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'موجودی فعلی',
-                        hintText: '۳۰',
-                      ),
-                      validator: _positiveOrZeroValidator,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _dailyUseController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'مصرف در روز',
-                        hintText: '۲',
-                      ),
-                      validator: _strictlyPositiveValidator,
-                    ),
-                  ),
-                ],
+              TextFormField(
+                key: const Key('add-medication-stock'),
+                controller: _stockController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: 'موجودی فعلی',
+                  hintText: '۳۰',
+                  suffixText: _selectedUnit.persianLabel,
+                  prefixIcon: const Icon(Icons.inventory_2_outlined),
+                ),
+                validator: (String? value) {
+                  final double? number = LocalizedNumberParser.tryParseDouble(
+                    value,
+                  );
+                  if (number == null || !number.isFinite || number < 0) {
+                    return 'عدد نامنفی وارد کنید.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              ConsumptionScheduleInput(
+                initialSchedule: _consumptionSchedule!,
+                onChanged: (ConsumptionSchedule? value) {
+                  _consumptionSchedule = value;
+                },
               ),
               const SizedBox(height: 14),
               TextFormField(
+                key: const Key('add-medication-alert-days'),
                 controller: _alertDaysController,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
@@ -136,7 +141,9 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                   suffixText: 'روز',
                 ),
                 validator: (String? value) {
-                  final int? number = int.tryParse(_normalizeNumber(value));
+                  final int? number = int.tryParse(
+                    LocalizedNumberParser.normalize(value),
+                  );
                   if (number == null || number < 0 || number > 365) {
                     return 'عدد صحیح بین صفر تا ۳۶۵ وارد کنید.';
                   }
@@ -145,6 +152,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
               ),
               const SizedBox(height: 14),
               TextFormField(
+                key: const Key('add-medication-notes'),
                 controller: _notesController,
                 minLines: 2,
                 maxLines: 4,
@@ -156,6 +164,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
+                key: const Key('save-new-medication'),
                 onPressed: _isSaving ? null : _save,
                 icon: _isSaving
                     ? const SizedBox.square(
@@ -172,37 +181,9 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
     );
   }
 
-  String? _positiveOrZeroValidator(String? value) {
-    final double? number = double.tryParse(_normalizeNumber(value));
-    if (number == null || !number.isFinite || number < 0) {
-      return 'عدد نامنفی وارد کنید.';
-    }
-    return null;
-  }
-
-  String? _strictlyPositiveValidator(String? value) {
-    final double? number = double.tryParse(_normalizeNumber(value));
-    if (number == null || !number.isFinite || number <= 0) {
-      return 'عدد بزرگ‌تر از صفر وارد کنید.';
-    }
-    return null;
-  }
-
-  String _normalizeNumber(String? value) {
-    const String persianDigits = '۰۱۲۳۴۵۶۷۸۹';
-    const String arabicDigits = '٠١٢٣٤٥٦٧٨٩';
-    String normalized = (value ?? '').trim().replaceAll(',', '.');
-
-    for (int index = 0; index < 10; index += 1) {
-      normalized = normalized
-          .replaceAll(persianDigits[index], '$index')
-          .replaceAll(arabicDigits[index], '$index');
-    }
-    return normalized;
-  }
-
   Future<void> _save() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
+    if (!(_formKey.currentState?.validate() ?? false) ||
+        _consumptionSchedule == null) {
       return;
     }
 
@@ -214,10 +195,14 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
         id: now.microsecondsSinceEpoch.toString(),
         name: _nameController.text,
         unit: _selectedUnit,
-        stockAtRecord: double.parse(_normalizeNumber(_stockController.text)),
-        unitsPerDay: double.parse(_normalizeNumber(_dailyUseController.text)),
+        stockAtRecord: LocalizedNumberParser.tryParseDouble(
+          _stockController.text,
+        )!,
+        consumptionSchedule: _consumptionSchedule,
         inventoryRecordedAt: now,
-        alertLeadDays: int.parse(_normalizeNumber(_alertDaysController.text)),
+        alertLeadDays: int.parse(
+          LocalizedNumberParser.normalize(_alertDaysController.text),
+        ),
         notes: _notesController.text,
       );
 
@@ -250,6 +235,8 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
 }
 
 class _DisclaimerCard extends StatelessWidget {
+  const _DisclaimerCard();
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -265,8 +252,8 @@ class _DisclaimerCard extends StatelessWidget {
             const SizedBox(width: 12),
             const Expanded(
               child: Text(
-                'مقدار مصرف را دقیقاً مطابق دستور پزشک یا داروساز وارد کنید. '
-                'این برنامه دوز مصرف را پیشنهاد یا تغییر نمی‌دهد.',
+                'برنامه مصرف را دقیقاً مطابق دستور پزشک یا داروساز وارد کنید. '
+                'این برنامه مقدار یا زمان مصرف را پیشنهاد یا تغییر نمی‌دهد.',
                 style: TextStyle(height: 1.6),
               ),
             ),

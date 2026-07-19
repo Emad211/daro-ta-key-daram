@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/consumption_schedule_formatter.dart';
 import '../../domain/medication.dart';
 import '../../domain/medication_stock_snapshot.dart';
 
@@ -68,6 +69,16 @@ class MedicationCard extends StatelessWidget {
                                   context,
                                 ).colorScheme.onSurfaceVariant,
                               ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          ConsumptionScheduleFormatter.describe(
+                            medication.consumptionSchedule,
+                            medication.unit,
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),

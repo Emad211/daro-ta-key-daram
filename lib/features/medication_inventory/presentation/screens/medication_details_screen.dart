@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../application/medication_repository.dart';
+import '../../domain/consumption_schedule_formatter.dart';
 import '../../domain/inventory_event.dart';
 import '../../domain/medication.dart';
 import '../../domain/medication_stock_snapshot.dart';
@@ -285,10 +286,11 @@ class _MedicationInformationCard extends StatelessWidget {
           children: <Widget>[
             _InformationRow(
               icon: Icons.schedule_outlined,
-              label: 'مصرف ثبت‌شده روزانه',
-              value:
-                  '${_number(medication.unitsPerDay)} '
-                  '${medication.unit.persianLabel}',
+              label: 'برنامه مصرف ثبت‌شده',
+              value: ConsumptionScheduleFormatter.describe(
+                medication.consumptionSchedule,
+                medication.unit,
+              ),
             ),
             const Divider(height: 24),
             _InformationRow(
@@ -408,6 +410,7 @@ class _InventoryTimeline extends StatelessWidget {
       InventoryEventType.initial => Icons.flag_outlined,
       InventoryEventType.restock => Icons.add_shopping_cart_outlined,
       InventoryEventType.correction => Icons.edit_note_outlined,
+      InventoryEventType.scheduleChange => Icons.event_repeat_outlined,
     };
   }
 }

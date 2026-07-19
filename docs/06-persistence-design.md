@@ -27,7 +27,8 @@
 | id | TEXT | PRIMARY KEY | UUID داخلی |
 | name | TEXT | NOT NULL | نام واردشده توسط کاربر |
 | unit | TEXT | NOT NULL | مقدار enum پایدار |
-| units_per_day | REAL | CHECK > 0 | مصرف روزانه مطابق ورود کاربر |
+| units_per_day | REAL | CHECK > 0 | میانگین مشتق‌شده برای سازگاری migration |
+| consumption_schedule_json | TEXT | NULL در schema | JSON نسخه‌دار برنامه مصرف؛ برای داده جدید الزامی در repository |
 | alert_lead_days | INTEGER | 0..365 | فاصله هشدار |
 | notes | TEXT | NULL | توضیح اختیاری |
 | is_archived | INTEGER | NOT NULL DEFAULT 0 | آرشیو منطقی |
@@ -42,7 +43,7 @@
 |---|---|---|---|
 | id | TEXT | PRIMARY KEY | UUID رویداد |
 | medication_id | TEXT | FK, NOT NULL | ارجاع به دارو |
-| event_type | TEXT | NOT NULL | initial, restock, correction |
+| event_type | TEXT | NOT NULL | initial, restock, correction, scheduleChange |
 | stock_units | REAL | CHECK >= 0 | موجودی مبنا بعد از رویداد |
 | effective_at | INTEGER | NOT NULL | زمان شروع محاسبه |
 | created_at | INTEGER | NOT NULL | زمان ثبت رویداد |
@@ -81,13 +82,14 @@ ON inventory_events(medication_id, effective_at DESC);
 
 ## Invariantها
 
-1. `units_per_day` همیشه بزرگ‌تر از صفر است.
-2. `stock_units` منفی نیست.
-3. حذف دارو در MVP به‌صورت archive انجام می‌شود.
-4. حذف دائمی، رویدادهای موجودی وابسته را داخل یک transaction حذف می‌کند.
-5. زمان‌ها به UTC ذخیره و برای نمایش به timezone دستگاه تبدیل می‌شوند.
-6. تغییر ساعت دستگاه، رویداد قبلی را بازنویسی نمی‌کند.
-7. نام دارو یا مقدار مصرف در جدول تبلیغات، analytics یا log قرار نمی‌گیرد.
+1. `consumption_schedule_json` برای تمام writeهای جدید معتبر و نسخه‌دار است.
+2. `units_per_day` فقط projection سازگاری و همیشه بزرگ‌تر از صفر است.
+3. `stock_units` منفی نیست.
+4. حذف دارو در MVP به‌صورت archive انجام می‌شود.
+5. حذف دائمی، رویدادهای موجودی وابسته را داخل یک transaction حذف می‌کند.
+6. زمان‌ها به UTC ذخیره و برای نمایش به timezone دستگاه تبدیل می‌شوند.
+7. تغییر ساعت دستگاه، رویداد قبلی را بازنویسی نمی‌کند.
+8. نام دارو یا مقدار مصرف در جدول تبلیغات، analytics یا log قرار نمی‌گیرد.
 
 ## Repository API هدف
 
@@ -129,7 +131,8 @@ abstract interface class MedicationRepository {
 
 ## Migration strategy
 
-- `schemaVersion = 1` برای اولین دیتابیس پایدار
+- `schemaVersion = 2` شامل برنامه مصرف ساختاریافته است.
+- migration نسخه ۱ نرخ روزانه قدیمی را به JSON روزانه معادل تبدیل می‌کند.
 - هر تغییر schema همراه migration test است.
 - migrationها forward-only هستند.
 - downgrade پشتیبانی نمی‌شود.

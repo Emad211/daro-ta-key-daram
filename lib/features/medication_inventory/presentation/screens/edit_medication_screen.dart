@@ -4,9 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/input/localized_number_parser.dart';
 import '../../application/medication_repository.dart';
+import '../../domain/consumption_schedule.dart';
+import '../../domain/consumption_schedule_formatter.dart';
 import '../../domain/medication.dart';
 import '../../domain/medication_unit.dart';
 import '../providers/medication_providers.dart';
+import '../widgets/consumption_schedule_input.dart';
 
 class EditMedicationScreen extends ConsumerWidget {
   const EditMedicationScreen({required this.medicationId, super.key});
@@ -50,37 +53,35 @@ class _EditMedicationForm extends ConsumerStatefulWidget {
   final Medication medication;
 
   @override
-  ConsumerState<_EditMedicationForm> createState() =>
-      _EditMedicationFormState();
+  ConsumerState<_EditMedicationForm> createState() {
+    return _EditMedicationFormState();
+  }
 }
 
 class _EditMedicationFormState extends ConsumerState<_EditMedicationForm> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
-  late final TextEditingController _dailyUseController;
   late final TextEditingController _alertDaysController;
   late final TextEditingController _notesController;
   late MedicationUnit _selectedUnit;
+  late ConsumptionSchedule? _consumptionSchedule;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.medication.name);
-    _dailyUseController = TextEditingController(
-      text: _number(widget.medication.unitsPerDay),
-    );
     _alertDaysController = TextEditingController(
       text: '${widget.medication.alertLeadDays}',
     );
     _notesController = TextEditingController(text: widget.medication.notes);
     _selectedUnit = widget.medication.unit;
+    _consumptionSchedule = widget.medication.consumptionSchedule;
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _dailyUseController.dispose();
     _alertDaysController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -140,25 +141,10 @@ class _EditMedicationFormState extends ConsumerState<_EditMedicationForm> {
                 },
               ),
               const SizedBox(height: 14),
-              TextFormField(
-                key: const Key('edit-medication-daily-use'),
-                controller: _dailyUseController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'مصرف ثبت‌شده در روز',
-                  prefixIcon: Icon(Icons.schedule_outlined),
-                ),
-                validator: (String? value) {
-                  final double? number = LocalizedNumberParser.tryParseDouble(
-                    value,
-                  );
-                  if (number == null || !number.isFinite || number <= 0) {
-                    return 'عدد بزرگ‌تر از صفر وارد کنید.';
-                  }
-                  return null;
+              ConsumptionScheduleInput(
+                initialSchedule: widget.medication.consumptionSchedule,
+                onChanged: (ConsumptionSchedule? value) {
+                  _consumptionSchedule = value;
                 },
               ),
               const SizedBox(height: 14),
@@ -214,9 +200,19 @@ class _EditMedicationFormState extends ConsumerState<_EditMedicationForm> {
   }
 
   Future<void> _save() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
+    if (!(_formKey.currentState?.validate() ?? false) ||
+        _consumptionSchedule == null) {
       return;
     }
+
+    final ConsumptionSchedule schedule = _consumptionSchedule!;
+    if (schedule != widget.medication.consumptionSchedule) {
+      final bool confirmed = await _confirmScheduleChange(schedule);
+      if (!confirmed || !mounted) {
+        return;
+      }
+    }
+
     setState(() => _isSaving = true);
 
     try {
@@ -224,9 +220,7 @@ class _EditMedicationFormState extends ConsumerState<_EditMedicationForm> {
       final Medication updated = widget.medication.copyWith(
         name: _nameController.text,
         unit: _selectedUnit,
-        unitsPerDay: LocalizedNumberParser.tryParseDouble(
-          _dailyUseController.text,
-        ),
+        consumptionSchedule: schedule,
         alertLeadDays: int.parse(
           LocalizedNumberParser.normalize(_alertDaysController.text),
         ),
@@ -240,6 +234,7 @@ class _EditMedicationFormState extends ConsumerState<_EditMedicationForm> {
       ref.invalidate(activeMedicationsProvider);
       ref.invalidate(archivedMedicationsProvider);
       ref.invalidate(medicationByIdProvider(updated.id));
+      ref.invalidate(inventoryEventsProvider(updated.id));
 
       if (mounted) {
         context.goNamed(
@@ -247,7 +242,13 @@ class _EditMedicationFormState extends ConsumerState<_EditMedicationForm> {
           pathParameters: <String, String>{'medicationId': updated.id},
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('مشخصات دارو به‌روزرسانی شد.')),
+          SnackBar(
+            content: Text(
+              schedule == widget.medication.consumptionSchedule
+                  ? 'مشخصات دارو به‌روزرسانی شد.'
+                  : 'برنامه مصرف ثبت شد و موجودی فعلی مبنای جدید قرار گرفت.',
+            ),
+          ),
         );
       }
     } on Object {
@@ -263,10 +264,39 @@ class _EditMedicationFormState extends ConsumerState<_EditMedicationForm> {
     }
   }
 
-  static String _number(double value) {
-    return value == value.roundToDouble()
-        ? value.toInt().toString()
-        : value.toString();
+  Future<bool> _confirmScheduleChange(ConsumptionSchedule schedule) async {
+    final String previous = ConsumptionScheduleFormatter.describe(
+      widget.medication.consumptionSchedule,
+      widget.medication.unit,
+    );
+    final String next = ConsumptionScheduleFormatter.describe(
+      schedule,
+      _selectedUnit,
+    );
+
+    return await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: const Text('تغییر برنامه مصرف؟'),
+            content: Text(
+              'برنامه قبلی:\n$previous\n\nبرنامه جدید:\n$next\n\n'
+              'برای جلوگیری از بازنویسی گذشته، موجودی تخمینی فعلی در همین '
+              'لحظه به‌عنوان مبنای جدید ثبت می‌شود.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('انصراف'),
+              ),
+              FilledButton(
+                key: const Key('confirm-schedule-change'),
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('تأیید تغییر'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 }
 
@@ -288,8 +318,9 @@ class _SafetyNotice extends StatelessWidget {
             const SizedBox(width: 12),
             const Expanded(
               child: Text(
-                'مقدار مصرف را فقط زمانی تغییر دهید که دستور پزشک یا داروساز '
-                'تغییر کرده باشد. این فرم موجودی را تغییر نمی‌دهد.',
+                'برنامه مصرف را فقط زمانی تغییر دهید که دستور پزشک یا داروساز '
+                'تغییر کرده باشد. برنامه هیچ پیشنهادی درباره مقدار یا زمان '
+                'مصرف ارائه نمی‌دهد.',
                 style: TextStyle(height: 1.6),
               ),
             ),

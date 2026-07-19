@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
@@ -13,6 +15,8 @@ class Medications extends Table {
 
   RealColumn get unitsPerDay =>
       real().customConstraint('NOT NULL CHECK (units_per_day > 0)')();
+
+  TextColumn get consumptionScheduleJson => text().nullable()();
 
   IntColumn get alertLeadDays => integer().customConstraint(
     'NOT NULL DEFAULT 5 '
@@ -102,12 +106,43 @@ final class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator migrator) async {
       await migrator.createAll();
+    },
+    onUpgrade: (Migrator migrator, int from, int to) async {
+      if (from < 2) {
+        await migrator.addColumn(
+          medications,
+          medications.consumptionScheduleJson,
+        );
+        final List<QueryRow> rows = await customSelect(
+          'SELECT id, units_per_day FROM medications',
+        ).get();
+        for (final QueryRow row in rows) {
+          final String id = row.read<String>('id');
+          final double legacyRate = row.read<double>('units_per_day');
+          final String scheduleJson = jsonEncode(<String, Object>{
+            'version': 1,
+            'kind': 'daily',
+            'amountPerOccurrence': legacyRate,
+            'occurrencesPerDay': 1,
+          });
+          await customUpdate(
+            'UPDATE medications '
+            'SET consumption_schedule_json = ? '
+            'WHERE id = ?',
+            variables: <Variable<Object>>[
+              Variable<String>(scheduleJson),
+              Variable<String>(id),
+            ],
+            updates: <TableInfo<Table, Object>>{medications},
+          );
+        }
+      }
     },
     beforeOpen: (OpeningDetails details) async {
       await customStatement('PRAGMA foreign_keys = ON');

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.0-dev.5 — 2026-07-19
+
+### Added
+
+- Structured daily, every-N-days, and selected-weekday consumption schedules
+- Versioned schedule JSON codec and Persian schedule formatter
+- Discrete occurrence-based stock projection for non-daily schedules
+- Drift schema version 2 with v1 daily-rate migration
+- Schedule-change inventory baseline events
+- Shared add/edit schedule input and explicit confirmation flow
+- Domain, codec, migration, repository, notification, and widget tests
+
+### Changed
+
+- Non-daily inventory no longer decays continuously through a decimal daily average
+- Schedule changes preserve the current estimate instead of rewriting historical usage
+- `units_per_day` remains only as a derived migration-compatibility value
+
 ## 0.1.0-dev.4 — 2026-07-18
 
 ### Added
