@@ -40,6 +40,11 @@ void main() {
       '۷',
     );
     await tester.enterText(find.byKey(const Key('edit-medication-notes')), '');
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('save-medication-metadata')),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.byKey(const Key('save-medication-metadata')));
     await tester.pumpAndSettle();
 
@@ -72,7 +77,12 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('هر چند روز یک‌بار').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('save-medication-metadata')));
+      await tester.scrollUntilVisible(
+      find.byKey(const Key('save-medication-metadata')),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('save-medication-metadata')));
       await tester.pumpAndSettle();
 
       expect(find.text('تغییر برنامه مصرف؟'), findsOneWidget);
@@ -110,8 +120,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('روزهای مشخص هفته').last);
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('schedule-weekday-5')));
     await tester.tap(find.byKey(const Key('schedule-weekday-5')));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('save-new-medication')),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.byKey(const Key('save-new-medication')));
     await tester.pumpAndSettle();
 
@@ -145,15 +161,6 @@ void main() {
     expect(await repository.watchArchivedMedications().first, isEmpty);
     expect(await repository.watchActiveMedications().first, hasLength(1));
   });
-}
-
-Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
-  await tester.scrollUntilVisible(
-    finder,
-    260,
-    scrollable: find.byType(Scrollable).first,
-  );
-  await tester.pumpAndSettle();
 }
 
 Future<void> _pumpApp(
