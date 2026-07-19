@@ -28,24 +28,30 @@ void main() {
           clock: () => now,
         );
 
-    appRouter.go('/medications/${medication.id}/edit');
-    await _pumpApp(tester, repository, now);
+    await _pumpAppAt(
+      tester,
+      repository,
+      now,
+      '/medications/${medication.id}/edit',
+    );
 
     await tester.enterText(
       find.byKey(const Key('edit-medication-name')),
       'متفورمین جدید',
     );
-    await tester.enterText(
-      find.byKey(const Key('edit-medication-alert-days')),
-      '۷',
+    final Finder alertDays = find.byKey(
+      const Key('edit-medication-alert-days'),
     );
-    await tester.enterText(find.byKey(const Key('edit-medication-notes')), '');
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('save-medication-metadata')),
-      240,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.byKey(const Key('save-medication-metadata')));
+    await _scrollTo(tester, alertDays);
+    await tester.enterText(alertDays, '۷');
+
+    final Finder notes = find.byKey(const Key('edit-medication-notes'));
+    await _scrollTo(tester, notes);
+    await tester.enterText(notes, '');
+
+    final Finder save = find.byKey(const Key('save-medication-metadata'));
+    await _scrollTo(tester, save);
+    await tester.tap(save);
     await tester.pumpAndSettle();
 
     final Medication updated = (await repository.findById(medication.id))!;
@@ -58,6 +64,7 @@ void main() {
     expect(updated.notes, isNull);
     expect(updated.stockAtRecord, 30);
     expect(events, hasLength(1));
+    expect(events.single.type, InventoryEventType.initial);
   });
 
   testWidgets(
@@ -70,19 +77,21 @@ void main() {
             clock: () => now,
           );
 
-      appRouter.go('/medications/${medication.id}/edit');
-      await _pumpApp(tester, repository, now);
+      await _pumpAppAt(
+        tester,
+        repository,
+        now,
+        '/medications/${medication.id}/edit',
+      );
 
       await tester.tap(find.byKey(const Key('schedule-kind')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('هر چند روز یک‌بار').last);
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.byKey(const Key('save-medication-metadata')),
-        240,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.tap(find.byKey(const Key('save-medication-metadata')));
+
+      final Finder save = find.byKey(const Key('save-medication-metadata'));
+      await _scrollTo(tester, save);
+      await tester.tap(save);
       await tester.pumpAndSettle();
 
       expect(find.text('تغییر برنامه مصرف؟'), findsOneWidget);
@@ -98,7 +107,19 @@ void main() {
         EveryNDaysConsumptionSchedule(amountPerOccurrence: 1, intervalDays: 2),
       );
       expect(events, hasLength(2));
-      expect(events.first.type, InventoryEventType.scheduleChange);
+      expect(
+        events.where(
+          (InventoryEvent event) =>
+              event.type == InventoryEventType.scheduleChange,
+        ),
+        hasLength(1),
+      );
+      expect(
+        events.where(
+          (InventoryEvent event) => event.type == InventoryEventType.initial,
+        ),
+        hasLength(1),
+      );
     },
   );
 
@@ -108,8 +129,7 @@ void main() {
     final InMemoryMedicationRepository repository =
         InMemoryMedicationRepository(clock: () => now);
 
-    appRouter.go('/add');
-    await _pumpApp(tester, repository, now);
+    await _pumpAppAt(tester, repository, now, '/add');
 
     await tester.enterText(
       find.byKey(const Key('add-medication-name')),
@@ -120,15 +140,15 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('روزهای مشخص هفته').last);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const Key('schedule-weekday-5')));
-    await tester.tap(find.byKey(const Key('schedule-weekday-5')));
+
+    final Finder friday = find.byKey(const Key('schedule-weekday-5'));
+    await _scrollTo(tester, friday);
+    await tester.tap(friday);
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('save-new-medication')),
-      240,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.byKey(const Key('save-new-medication')));
+
+    final Finder save = find.byKey(const Key('save-new-medication'));
+    await _scrollTo(tester, save);
+    await tester.tap(save);
     await tester.pumpAndSettle();
 
     final List<Medication> medications = await repository
@@ -151,8 +171,7 @@ void main() {
     final InMemoryMedicationRepository repository =
         InMemoryMedicationRepository(seed: <Medication>[medication]);
 
-    appRouter.go('/archive');
-    await _pumpApp(tester, repository, now);
+    await _pumpAppAt(tester, repository, now, '/archive');
 
     expect(find.text('متفورمین'), findsOneWidget);
     await tester.tap(find.byKey(Key('restore-${medication.id}')));
@@ -163,10 +182,20 @@ void main() {
   });
 }
 
-Future<void> _pumpApp(
+Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(
+    finder,
+    240,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _pumpAppAt(
   WidgetTester tester,
   InMemoryMedicationRepository repository,
   DateTime now,
+  String route,
 ) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -180,6 +209,8 @@ Future<void> _pumpApp(
       child: const DaroTaKeyApp(),
     ),
   );
+  await tester.pumpAndSettle();
+  appRouter.go(route);
   await tester.pumpAndSettle();
 }
 
