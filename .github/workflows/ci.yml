@@ -18,13 +18,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Export branch snapshot
-        if: github.ref == 'refs/heads/agent/structured-consumption-schedules'
+        if: github.head_ref == 'agent/structured-consumption-schedules' || github.ref == 'refs/heads/agent/structured-consumption-schedules'
         run: |
           tar --exclude=.git --exclude=.dart_tool --exclude=build \
             -czf source-snapshot.tar.gz .
 
       - name: Upload branch snapshot
-        if: github.ref == 'refs/heads/agent/structured-consumption-schedules'
+        if: github.head_ref == 'agent/structured-consumption-schedules' || github.ref == 'refs/heads/agent/structured-consumption-schedules'
         uses: actions/upload-artifact@v4
         with:
           name: structured-schedule-source-snapshot
