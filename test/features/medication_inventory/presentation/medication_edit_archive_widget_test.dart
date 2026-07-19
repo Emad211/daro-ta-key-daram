@@ -78,11 +78,11 @@ void main() {
       await tester.tap(find.text('هر چند روز یک‌بار').last);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
-      find.byKey(const Key('save-medication-metadata')),
-      240,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.byKey(const Key('save-medication-metadata')));
+        find.byKey(const Key('save-medication-metadata')),
+        240,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.byKey(const Key('save-medication-metadata')));
       await tester.pumpAndSettle();
 
       expect(find.text('تغییر برنامه مصرف؟'), findsOneWidget);
