@@ -1,8 +1,6 @@
 name: Flutter CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
 
 permissions:
@@ -38,26 +36,47 @@ jobs:
           rm -rf /tmp/daro_drift_schemas
           bash tool/export_drift_schema.sh /tmp/daro_drift_schemas
           test -f drift_schemas/drift_schema_v1.json
-          diff -u \
-            drift_schemas/drift_schema_v2.json \
-            /tmp/daro_drift_schemas/drift_schema_v2.json
+          diff -u drift_schemas/drift_schema_v2.json /tmp/daro_drift_schemas/drift_schema_v2.json
 
       - name: Verify formatting
         run: dart format --output=none --set-exit-if-changed lib test
 
-      - name: Analyze
-        run: flutter analyze
+      - name: Capture analyzer
+        id: analyze
+        continue-on-error: true
+        run: |
+          set +e
+          flutter analyze > analyzer-output.txt 2>&1
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          cat analyzer-output.txt
+          exit $status
 
-      - name: Test
-        run: flutter test --coverage
+      - name: Capture tests
+        id: tests
+        continue-on-error: true
+        run: |
+          set +e
+          flutter test --coverage --reporter expanded > test-output.txt 2>&1
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          cat test-output.txt
+          exit $status
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: structured-schedule-final-diagnostics
+          path: |
+            analyzer-output.txt
+            test-output.txt
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Enforce results
+        if: steps.analyze.outputs.exit_code != '0' || steps.tests.outputs.exit_code != '0'
+        run: exit 1
 
       - name: Build debug APK
         run: flutter build apk --debug
-
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: daro-ta-key-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
