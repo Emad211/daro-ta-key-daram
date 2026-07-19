@@ -1,0 +1,30 @@
+name: Export source snapshot
+
+on:
+  push:
+    branches: [agent/structured-consumption-schedules]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create source archive
+        run: |
+          tar --exclude=.git --exclude=.dart_tool --exclude=build \
+            -czf source-snapshot.tar.gz .
+
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: structured-schedule-source-snapshot
+          path: source-snapshot.tar.gz
+          if-no-files-found: error
+          retention-days: 1
