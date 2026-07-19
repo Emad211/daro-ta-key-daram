@@ -1,3 +1,4 @@
+import 'medication_details_update.dart';
 import '../domain/inventory_event.dart';
 import '../domain/medication.dart';
 
@@ -10,7 +11,9 @@ abstract interface class MedicationRepository {
 
   Future<Medication?> findById(String medicationId);
 
-  Future<void> upsert(Medication medication);
+  Future<void> create(Medication medication);
+
+  Future<void> updateDetails(MedicationDetailsUpdate update);
 
   Future<void> recordInventoryEvent(InventoryEvent event);
 
