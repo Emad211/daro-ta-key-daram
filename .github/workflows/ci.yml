@@ -28,14 +28,15 @@ jobs:
 
       - name: Apply focused patches
         run: |
-          git apply --check .step4/patches/01-add-screen.patch
-          git apply --check .step4/patches/02-edit-screen.patch
-          git apply --check .step4/patches/03-drift-tests.patch
-          git apply --check .step4/patches/04-memory-schedule.patch
-          git apply .step4/patches/01-add-screen.patch
-          git apply .step4/patches/02-edit-screen.patch
-          git apply .step4/patches/03-drift-tests.patch
-          git apply .step4/patches/04-memory-schedule.patch
+          for patch_file in \
+            .step4/patches/01-add-screen.patch \
+            .step4/patches/02-edit-screen.patch \
+            .step4/patches/03-drift-tests.patch \
+            .step4/patches/04-memory-schedule.patch
+          do
+            echo "Applying ${patch_file}"
+            git apply --verbose "${patch_file}"
+          done
 
       - name: Restore strict CI and remove staging files
         run: |
