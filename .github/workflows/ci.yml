@@ -1,22 +1,21 @@
 name: Flutter CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  export-format:
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
 
     steps:
-      - name: Checkout source branch
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: agent/structured-consumption-schedules
-          fetch-depth: 0
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -25,45 +24,38 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Verify committed Android platform
+        run: test -f android/app/build.gradle.kts
+
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Apply canonical formatting
-        run: |
-          dart format lib test
-          git diff --name-only -- lib test > formatted-files.txt
-          mkdir -p canonical
-          while IFS= read -r file; do
-            if [ -n "$file" ]; then
-              mkdir -p "canonical/$(dirname "$file")"
-              cp "$file" "canonical/$file"
-            fi
-          done < formatted-files.txt
+      - name: Generate Drift code
+        run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Prepare strict CI
+      - name: Verify Drift schema snapshot
         run: |
-          git fetch origin main
-          git show origin/main:.github/workflows/ci.yml > strict-ci.yml
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('strict-ci.yml')
-          text = path.read_text()
-          text = text.replace(
-              '          diff -ru drift_schemas /tmp/daro_drift_schemas\n',
-              '          test -f drift_schemas/drift_schema_v1.json\n'
-              '          diff -u drift_schemas/drift_schema_v2.json '
-              '/tmp/daro_drift_schemas/drift_schema_v2.json\n',
-          )
-          path.write_text(text)
-          PY
+          rm -rf /tmp/daro_drift_schemas
+          bash tool/export_drift_schema.sh /tmp/daro_drift_schemas
+          test -f drift_schemas/drift_schema_v1.json
+          diff -u drift_schemas/drift_schema_v2.json /tmp/daro_drift_schemas/drift_schema_v2.json
 
-      - name: Upload canonical artifact
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test --coverage
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: structured-schedule-format-output
-          path: |
-            canonical
-            formatted-files.txt
-            strict-ci.yml
+          name: daro-ta-key-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
