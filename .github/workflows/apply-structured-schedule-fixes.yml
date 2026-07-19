@@ -1,0 +1,175 @@
+name: Apply structured schedule fixes
+
+on:
+  push:
+    branches: [agent/structured-consumption-schedules]
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/structured-consumption-schedules
+          fetch-depth: 0
+
+      - name: Download generated schema
+        uses: actions/download-artifact@v4
+        with:
+          name: structured-schedule-drift-schema
+          path: /tmp/schema
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 29685434642
+
+      - name: Download canonical Dart sources
+        uses: actions/download-artifact@v4
+        with:
+          name: structured-schedule-canonical-sources
+          path: /tmp/canonical
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 29685434642
+
+      - name: Apply generated and canonical files
+        shell: bash
+        run: |
+          cp /tmp/schema/drift_schema_v2.json drift_schemas/drift_schema_v2.json
+          files=(
+            lib/features/medication_inventory/domain/consumption_schedule_calculator.dart
+            lib/features/medication_inventory/domain/consumption_schedule_codec.dart
+            lib/features/medication_inventory/domain/consumption_schedule_formatter.dart
+            lib/features/medication_inventory/domain/stock_calculator.dart
+            lib/features/medication_inventory/presentation/widgets/consumption_schedule_input.dart
+            lib/features/medication_inventory/presentation/widgets/medication_card.dart
+            test/core/database/app_database_migration_test.dart
+            test/features/medication_inventory/domain/consumption_schedule_calculator_test.dart
+            test/features/medication_inventory/domain/consumption_schedule_test.dart
+            test/features/medication_inventory/domain/stock_calculator_test.dart
+            test/features/medication_inventory/infrastructure/in_memory_schedule_change_test.dart
+            test/features/medication_inventory/infrastructure/medication_metadata_archive_test.dart
+            test/features/medication_inventory/presentation/medication_edit_archive_widget_test.dart
+          )
+          for file in "${files[@]}"; do
+            cp "/tmp/canonical/$file" "$file"
+          done
+
+      - name: Apply focused corrections
+        shell: python
+        run: |
+          from pathlib import Path
+
+          repository = Path(
+              'lib/features/medication_inventory/infrastructure/'
+              'drift_medication_repository.dart'
+          )
+          text = repository.read_text()
+          text = text.replace(
+              'final double currentEstimatedStock = previousMedication!\n',
+              'final double currentEstimatedStock = previousMedication\n',
+          )
+          repository.write_text(text)
+
+          migration = Path('test/core/database/app_database_migration_test.dart')
+          text = migration.read_text().replace(
+              'final QueryRow versionRow = await database',
+              'final versionRow = await database',
+          )
+          migration.write_text(text)
+
+          widget_test = Path(
+              'test/features/medication_inventory/presentation/'
+              'medication_edit_archive_widget_test.dart'
+          )
+          text = widget_test.read_text()
+          text = text.replace(
+              """    await tester.enterText(
+                find.byKey(const Key('edit-medication-alert-days')),
+                '۷',
+              );
+              await tester.enterText(find.byKey(const Key('edit-medication-notes')), '');
+              await tester.tap(find.byKey(const Key('save-medication-metadata')));
+              """,
+              """    final Finder alertDays = find.byKey(
+                const Key('edit-medication-alert-days'),
+              );
+              await _scrollTo(tester, alertDays);
+              await tester.enterText(alertDays, '۷');
+              final Finder notes = find.byKey(const Key('edit-medication-notes'));
+              await _scrollTo(tester, notes);
+              await tester.enterText(notes, '');
+              final Finder saveMetadata = find.byKey(
+                const Key('save-medication-metadata'),
+              );
+              await _scrollTo(tester, saveMetadata);
+              await tester.tap(saveMetadata);
+              """,
+          )
+          text = text.replace(
+              """      await tester.tap(find.byKey(const Key('save-medication-metadata')));
+              await tester.pumpAndSettle();
+              """,
+              """      final Finder saveMetadata = find.byKey(
+                const Key('save-medication-metadata'),
+              );
+              await _scrollTo(tester, saveMetadata);
+              await tester.tap(saveMetadata);
+              await tester.pumpAndSettle();
+              """,
+              1,
+          )
+          text = text.replace(
+              """    await tester.tap(find.byKey(const Key('schedule-weekday-5')));
+              await tester.pumpAndSettle();
+              await tester.tap(find.byKey(const Key('save-new-medication')));
+              """,
+              """    final Finder friday = find.byKey(const Key('schedule-weekday-5'));
+              await _scrollTo(tester, friday);
+              await tester.tap(friday);
+              await tester.pumpAndSettle();
+              final Finder saveMedication = find.byKey(
+                const Key('save-new-medication'),
+              );
+              await _scrollTo(tester, saveMedication);
+              await tester.tap(saveMedication);
+              """,
+          )
+          helper = """
+          Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
+            await tester.scrollUntilVisible(
+              finder,
+              260,
+              scrollable: find.byType(Scrollable).first,
+            );
+            await tester.pumpAndSettle();
+          }
+
+          """
+          text = text.replace('Future<void> _pumpApp(', helper + 'Future<void> _pumpApp(')
+          widget_test.write_text(text)
+
+      - name: Restore strict CI and remove temporary workflow
+        shell: bash
+        run: |
+          git fetch origin main
+          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
+          rm -f .github/workflows/apply-structured-schedule-fixes.yml
+
+      - name: Commit corrections
+        shell: bash
+        run: |
+          dart format lib test
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix: finalize structured schedule migration and tests"
+          git push origin HEAD:agent/structured-consumption-schedules
