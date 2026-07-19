@@ -26,13 +26,12 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Apply focused patches
+      - name: Apply verified patches
         run: |
           for patch_file in \
             .step4/patches/01-add-screen.patch \
             .step4/patches/02-edit-screen.patch \
-            .step4/patches/03-drift-tests.patch \
-            .step4/patches/04-memory-schedule.patch
+            .step4/patches/03-drift-tests.patch
           do
             echo "Applying ${patch_file}"
             git apply --verbose "${patch_file}"
