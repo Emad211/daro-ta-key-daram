@@ -19,10 +19,7 @@ jobs:
 
       - name: Export branch snapshot
         if: github.head_ref == 'agent/structured-consumption-schedules' || github.ref == 'refs/heads/agent/structured-consumption-schedules'
-        run: |
-          tar --exclude=.git --exclude=.dart_tool --exclude=build \
-            --exclude=source-snapshot.tar.gz \
-            -czf source-snapshot.tar.gz .
+        run: git archive --format=tar.gz --output=source-snapshot.tar.gz HEAD
 
       - name: Upload branch snapshot
         if: github.head_ref == 'agent/structured-consumption-schedules' || github.ref == 'refs/heads/agent/structured-consumption-schedules'
