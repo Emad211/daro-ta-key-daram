@@ -1,15 +1,17 @@
 name: Flutter CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  diagnose:
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     steps:
       - name: Checkout
@@ -22,39 +24,38 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install dependencies and generate code
-        run: |
-          flutter pub get
-          dart run build_runner build --delete-conflicting-outputs
+      - name: Verify committed Android platform
+        run: test -f android/app/build.gradle.kts
 
-      - name: Verify schema and formatting
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate Drift code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Verify Drift schema snapshot
         run: |
           rm -rf /tmp/daro_drift_schemas
           bash tool/export_drift_schema.sh /tmp/daro_drift_schemas
           test -f drift_schemas/drift_schema_v1.json
           diff -u drift_schemas/drift_schema_v2.json /tmp/daro_drift_schemas/drift_schema_v2.json
-          dart format --output=none --set-exit-if-changed lib test
 
-      - name: Capture analyzer
-        id: analyze
-        continue-on-error: true
-        run: |
-          set +e
-          flutter analyze > analyzer-output.txt 2>&1
-          status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
-          cat analyzer-output.txt
-          exit $status
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed lib test
 
-      - name: Upload analyzer diagnostics
-        if: always()
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test --coverage
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: step4-analyzer-diagnostics
-          path: analyzer-output.txt
+          name: daro-ta-key-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
-          retention-days: 1
-
-      - name: Enforce analyzer
-        if: steps.analyze.outputs.exit_code != '0'
-        run: exit 1
+          retention-days: 7
