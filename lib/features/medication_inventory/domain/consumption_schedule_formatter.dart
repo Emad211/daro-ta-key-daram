@@ -2,10 +2,7 @@ import 'consumption_schedule.dart';
 import 'medication_unit.dart';
 
 abstract final class ConsumptionScheduleFormatter {
-  static String describe(
-    ConsumptionSchedule schedule,
-    MedicationUnit unit,
-  ) {
+  static String describe(ConsumptionSchedule schedule, MedicationUnit unit) {
     final String amount = formatNumber(schedule.amountPerOccurrence);
     final String unitLabel = unit.persianLabel;
 
@@ -25,7 +22,9 @@ abstract final class ConsumptionScheduleFormatter {
       return value.toInt().toString();
     }
     final String fixed = value.toStringAsFixed(3);
-    return fixed.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+    return fixed
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
   }
 
   static String weekdayLabel(int weekday) {
