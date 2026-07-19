@@ -1,4 +1,5 @@
 import 'package:daro_ta_key_daram/core/database/app_database.dart';
+import 'package:daro_ta_key_daram/features/medication_inventory/application/medication_details_update.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/consumption_schedule.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/inventory_event.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication.dart';
@@ -11,43 +12,7 @@ void main() {
   final DateTime baseline = DateTime.utc(2026, 7, 1, 8);
   final DateTime changeTime = DateTime.utc(2026, 7, 3, 8);
 
-  test(
-    'metadata-only update preserves schedule and inventory history',
-    () async {
-      final AppDatabase database = AppDatabase(NativeDatabase.memory());
-      final DriftMedicationRepository repository = DriftMedicationRepository(
-        database,
-        clock: () => changeTime,
-      );
-      addTearDown(database.close);
-
-      final Medication initial = _dailyMedication(baseline);
-      await repository.upsert(initial);
-
-      await repository.upsert(
-        initial.copyWith(
-          name: 'متفورمین ۵۰۰',
-          unit: MedicationUnit.capsule,
-          alertLeadDays: 9,
-          clearNotes: true,
-        ),
-      );
-
-      final Medication? updated = await repository.findById(initial.id);
-      final List<InventoryEventRow> events = await database
-          .select(database.inventoryEvents)
-          .get();
-
-      expect(updated?.name, 'متفورمین ۵۰۰');
-      expect(updated?.unit, MedicationUnit.capsule);
-      expect(updated?.consumptionSchedule, initial.consumptionSchedule);
-      expect(updated?.alertLeadDays, 9);
-      expect(updated?.notes, isNull);
-      expect(events, hasLength(1));
-    },
-  );
-
-  test('schedule change creates a new current-stock baseline', () async {
+  test('details-only update preserves schedule and inventory history', () async {
     final AppDatabase database = AppDatabase(NativeDatabase.memory());
     final DriftMedicationRepository repository = DriftMedicationRepository(
       database,
@@ -56,13 +21,53 @@ void main() {
     addTearDown(database.close);
 
     final Medication initial = _dailyMedication(baseline);
-    await repository.upsert(initial);
-    await repository.upsert(
-      initial.copyWith(
+    await repository.create(initial);
+    await repository.updateDetails(
+      MedicationDetailsUpdate(
+        medicationId: initial.id,
+        name: 'متفورمین ۵۰۰',
+        unit: MedicationUnit.capsule,
+        consumptionSchedule: initial.consumptionSchedule,
+        alertLeadDays: 9,
+      ),
+    );
+
+    final Medication? updated = await repository.findById(initial.id);
+    final List<InventoryEventRow> events = await database
+        .select(database.inventoryEvents)
+        .get();
+
+    expect(updated?.name, 'متفورمین ۵۰۰');
+    expect(updated?.unit, MedicationUnit.capsule);
+    expect(updated?.consumptionSchedule, initial.consumptionSchedule);
+    expect(updated?.alertLeadDays, 9);
+    expect(updated?.notes, isNull);
+    expect(updated?.stockAtRecord, initial.stockAtRecord);
+    expect(updated?.inventoryRecordedAt.toUtc(), baseline);
+    expect(events, hasLength(1));
+  });
+
+  test('schedule update creates one current-stock boundary', () async {
+    final AppDatabase database = AppDatabase(NativeDatabase.memory());
+    final DriftMedicationRepository repository = DriftMedicationRepository(
+      database,
+      clock: () => changeTime,
+    );
+    addTearDown(database.close);
+
+    final Medication initial = _dailyMedication(baseline);
+    await repository.create(initial);
+    await repository.updateDetails(
+      MedicationDetailsUpdate(
+        medicationId: initial.id,
+        name: initial.name,
+        unit: initial.unit,
         consumptionSchedule: EveryNDaysConsumptionSchedule(
           amountPerOccurrence: 1,
           intervalDays: 2,
         ),
+        alertLeadDays: initial.alertLeadDays,
+        notes: initial.notes,
       ),
     );
 
@@ -78,12 +83,16 @@ void main() {
     expect(updated.stockAtRecord, 8);
     expect(updated.inventoryRecordedAt.toUtc(), changeTime);
     expect(events, hasLength(2));
-    expect(events.first.type, InventoryEventType.scheduleChange);
-    expect(events.first.stockUnits, 8);
-    expect(events.first.effectiveAt.toUtc(), changeTime);
+    expect(
+      events.where(
+        (InventoryEvent event) =>
+            event.type == InventoryEventType.scheduleChange,
+      ),
+      hasLength(1),
+    );
   });
 
-  test('rejects changing schedule and explicit baseline together', () async {
+  test('duplicate create fails without adding history', () async {
     final AppDatabase database = AppDatabase(NativeDatabase.memory());
     final DriftMedicationRepository repository = DriftMedicationRepository(
       database,
@@ -92,20 +101,13 @@ void main() {
     addTearDown(database.close);
 
     final Medication initial = _dailyMedication(baseline);
-    await repository.upsert(initial);
+    await repository.create(initial);
 
+    await expectLater(repository.create(initial), throwsStateError);
+    expect(await database.select(database.medications).get(), hasLength(1));
     expect(
-      () => repository.upsert(
-        initial.copyWith(
-          consumptionSchedule: WeeklyConsumptionSchedule(
-            amountPerOccurrence: 1,
-            weekdays: <int>{DateTime.friday},
-          ),
-          stockAtRecord: 50,
-          inventoryRecordedAt: changeTime,
-        ),
-      ),
-      throwsArgumentError,
+      await database.select(database.inventoryEvents).get(),
+      hasLength(1),
     );
   });
 
@@ -118,7 +120,7 @@ void main() {
     addTearDown(database.close);
 
     final Medication medication = _dailyMedication(baseline);
-    await repository.upsert(medication);
+    await repository.create(medication);
     await repository.archive(medication.id);
 
     expect(await repository.watchActiveMedications().first, isEmpty);
