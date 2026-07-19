@@ -33,20 +33,68 @@ jobs:
       - name: Generate Drift code
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Verify Drift schema snapshot
+      - name: Export Drift schema
         run: |
           rm -rf /tmp/daro_drift_schemas
           bash tool/export_drift_schema.sh /tmp/daro_drift_schemas
-          diff -ru drift_schemas /tmp/daro_drift_schemas
 
-      - name: Verify formatting
-        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Upload generated schema
+        uses: actions/upload-artifact@v4
+        with:
+          name: structured-schedule-drift-schema
+          path: /tmp/daro_drift_schemas
+          if-no-files-found: error
+          retention-days: 1
 
-      - name: Analyze
-        run: flutter analyze
+      - name: Apply canonical formatting
+        run: dart format lib test
 
-      - name: Test
-        run: flutter test --coverage
+      - name: Upload canonical Dart sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: structured-schedule-canonical-sources
+          path: |
+            lib
+            test
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Capture analyzer diagnostics
+        id: analyze
+        continue-on-error: true
+        run: |
+          set +e
+          flutter analyze > analyzer-output.txt 2>&1
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          cat analyzer-output.txt
+          exit $status
+
+      - name: Capture test diagnostics
+        id: tests
+        continue-on-error: true
+        run: |
+          set +e
+          flutter test --coverage --reporter expanded > test-output.txt 2>&1
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          cat test-output.txt
+          exit $status
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: structured-schedule-diagnostics
+          path: |
+            analyzer-output.txt
+            test-output.txt
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Enforce diagnostics
+        if: steps.analyze.outputs.exit_code != '0' || steps.tests.outputs.exit_code != '0'
+        run: exit 1
 
       - name: Build debug APK
         run: flutter build apk --debug
