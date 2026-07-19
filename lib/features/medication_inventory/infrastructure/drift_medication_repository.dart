@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
+import '../application/medication_details_update.dart';
 import '../application/medication_repository.dart';
 import '../domain/consumption_schedule.dart';
 import '../domain/consumption_schedule_codec.dart';
@@ -94,16 +95,16 @@ final class DriftMedicationRepository implements MedicationRepository {
   }
 
   @override
-  Future<void> upsert(Medication medication) async {
+  Future<void> create(Medication medication) async {
     final DateTime now = _nowUtc();
-    final DateTime requestedEffectiveAt = _normalizeUtc(
+    final DateTime effectiveAt = _normalizeUtc(
       medication.inventoryRecordedAt,
     );
-    if (requestedEffectiveAt.isAfter(now)) {
+    if (effectiveAt.isAfter(now)) {
       throw ArgumentError.value(
         medication.inventoryRecordedAt,
         'medication.inventoryRecordedAt',
-        'Inventory baselines cannot become effective in the future.',
+        'The initial baseline cannot become effective in the future.',
       );
     }
 
@@ -112,104 +113,103 @@ final class DriftMedicationRepository implements MedicationRepository {
           await (_database.select(_database.medications)
                 ..where((Medications table) => table.id.equals(medication.id)))
               .getSingleOrNull();
-      final InventoryEventRow? latest = existing == null
-          ? null
-          : await _latestInventoryEvent(medication.id);
-      if (existing != null && latest == null) {
-        throw StateError(
-          'Medication ${medication.id} has no inventory baseline event.',
-        );
+      if (existing != null) {
+        throw StateError('An aggregate with this identifier already exists.');
       }
 
-      final Medication? previousMedication = existing == null
-          ? null
-          : _toMedicationDomain(existing, latest!);
-      final bool scheduleChanged =
-          previousMedication != null &&
-          previousMedication.consumptionSchedule !=
-              medication.consumptionSchedule;
-      final bool requestedBaselineChanged =
-          latest == null ||
-          latest.stockUnits != medication.stockAtRecord ||
-          _normalizeUtc(latest.effectiveAt) != requestedEffectiveAt;
-
-      if (scheduleChanged && requestedBaselineChanged) {
-        throw ArgumentError(
-          'Change the consumption schedule and inventory baseline in separate '
-          'operations.',
-        );
-      }
-
-      final MedicationsCompanion companion = MedicationsCompanion(
-        id: Value<String>(medication.id),
-        name: Value<String>(medication.name),
-        unit: Value<String>(medication.unit.name),
-        unitsPerDay: Value<double>(medication.unitsPerDay),
-        consumptionScheduleJson: Value<String>(
-          ConsumptionScheduleCodec.encode(medication.consumptionSchedule),
+      await _database.into(_database.medications).insert(
+        MedicationsCompanion(
+          id: Value<String>(medication.id),
+          name: Value<String>(medication.name),
+          unit: Value<String>(medication.unit.name),
+          unitsPerDay: Value<double>(medication.unitsPerDay),
+          consumptionScheduleJson: Value<String>(
+            ConsumptionScheduleCodec.encode(medication.consumptionSchedule),
+          ),
+          alertLeadDays: Value<int>(medication.alertLeadDays),
+          notes: Value<String?>(medication.notes),
+          isArchived: Value<bool>(medication.isArchived),
+          createdAt: Value<DateTime>(now),
+          updatedAt: Value<DateTime>(now),
         ),
-        alertLeadDays: Value<int>(medication.alertLeadDays),
-        notes: Value<String?>(medication.notes),
-        isArchived: Value<bool>(medication.isArchived),
-        createdAt: Value<DateTime>(_normalizeUtc(existing?.createdAt ?? now)),
-        updatedAt: Value<DateTime>(now),
       );
+      await _insertInventoryEvent(
+        InventoryEvent(
+          id: _uuid.v4(),
+          medicationId: medication.id,
+          type: InventoryEventType.initial,
+          stockUnits: medication.stockAtRecord,
+          effectiveAt: effectiveAt,
+          createdAt: now,
+        ),
+        effectiveAt: effectiveAt,
+      );
+    });
+  }
 
+  @override
+  Future<void> updateDetails(MedicationDetailsUpdate update) async {
+    final DateTime now = _nowUtc();
+
+    await _database.transaction(() async {
+      final MedicationRow? existing =
+          await (_database.select(_database.medications)..where(
+                (Medications table) => table.id.equals(update.medicationId),
+              ))
+              .getSingleOrNull();
       if (existing == null) {
-        await _database.into(_database.medications).insert(companion);
-      } else {
-        await (_database.update(_database.medications)
-              ..where((Medications table) => table.id.equals(medication.id)))
-            .write(companion);
+        throw StateError('The requested aggregate does not exist.');
       }
 
-      if (existing == null) {
-        await _insertInventoryEvent(
-          InventoryEvent(
-            id: _uuid.v4(),
-            medicationId: medication.id,
-            type: InventoryEventType.initial,
-            stockUnits: medication.stockAtRecord,
-            effectiveAt: requestedEffectiveAt,
-            createdAt: now,
-          ),
-          effectiveAt: requestedEffectiveAt,
-        );
+      final InventoryEventRow? latest = await _latestInventoryEvent(
+        update.medicationId,
+      );
+      if (latest == null) {
+        throw StateError('The aggregate has no baseline event.');
+      }
+
+      final Medication previous = _toMedicationDomain(existing, latest);
+      final bool scheduleChanged =
+          previous.consumptionSchedule != update.consumptionSchedule;
+      final Medication updated = update.applyTo(previous);
+
+      await (_database.update(_database.medications)
+            ..where(
+              (Medications table) => table.id.equals(update.medicationId),
+            ))
+          .write(
+            MedicationsCompanion(
+              name: Value<String>(updated.name),
+              unit: Value<String>(updated.unit.name),
+              unitsPerDay: Value<double>(updated.unitsPerDay),
+              consumptionScheduleJson: Value<String>(
+                ConsumptionScheduleCodec.encode(updated.consumptionSchedule),
+              ),
+              alertLeadDays: Value<int>(updated.alertLeadDays),
+              notes: Value<String?>(updated.notes),
+              updatedAt: Value<DateTime>(now),
+            ),
+          );
+
+      if (!scheduleChanged) {
         return;
       }
 
-      if (scheduleChanged) {
-        final double currentEstimatedStock = previousMedication
-            .stockAt(now.toLocal())
-            .estimatedRemainingUnits;
-        await _insertInventoryEvent(
-          InventoryEvent(
-            id: _uuid.v4(),
-            medicationId: medication.id,
-            type: InventoryEventType.scheduleChange,
-            stockUnits: currentEstimatedStock,
-            effectiveAt: now,
-            createdAt: now,
-            note: 'مبنای موجودی پس از تغییر برنامه مصرف',
-          ),
+      final double currentEstimatedStock = previous
+          .stockAt(now.toLocal())
+          .estimatedRemainingUnits;
+      await _insertInventoryEvent(
+        InventoryEvent(
+          id: _uuid.v4(),
+          medicationId: update.medicationId,
+          type: InventoryEventType.scheduleChange,
+          stockUnits: currentEstimatedStock,
           effectiveAt: now,
-        );
-        return;
-      }
-
-      if (requestedBaselineChanged) {
-        await _insertInventoryEvent(
-          InventoryEvent(
-            id: _uuid.v4(),
-            medicationId: medication.id,
-            type: InventoryEventType.correction,
-            stockUnits: medication.stockAtRecord,
-            effectiveAt: requestedEffectiveAt,
-            createdAt: now,
-          ),
-          effectiveAt: requestedEffectiveAt,
-        );
-      }
+          createdAt: now,
+          note: 'Boundary created after a schedule update',
+        ),
+        effectiveAt: now,
+      );
     });
   }
 
