@@ -54,14 +54,20 @@ final class NotificationAwareMedicationRepository
 
   @override
   Future<void> archive(String medicationId) async {
+    final Medication? before = await _delegate.findById(medicationId);
     await _delegate.archive(medicationId);
-    await _notifications.cancelMedication(medicationId);
+    if (before != null && !before.isArchived) {
+      await _notifications.cancelMedication(medicationId);
+    }
   }
 
   @override
   Future<void> restore(String medicationId) async {
+    final Medication? before = await _delegate.findById(medicationId);
     await _delegate.restore(medicationId);
-    await _notifications.rescheduleMedication(medicationId);
+    if (before != null && before.isArchived) {
+      await _notifications.rescheduleMedication(medicationId);
+    }
   }
 
   @override
