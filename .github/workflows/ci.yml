@@ -21,6 +21,7 @@ jobs:
         if: github.head_ref == 'agent/structured-consumption-schedules' || github.ref == 'refs/heads/agent/structured-consumption-schedules'
         run: |
           tar --exclude=.git --exclude=.dart_tool --exclude=build \
+            --exclude=source-snapshot.tar.gz \
             -czf source-snapshot.tar.gz .
 
       - name: Upload branch snapshot
