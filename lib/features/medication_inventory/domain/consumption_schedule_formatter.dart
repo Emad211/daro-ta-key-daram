@@ -9,11 +9,10 @@ abstract final class ConsumptionScheduleFormatter {
     return switch (schedule) {
       DailyConsumptionSchedule(:final occurrencesPerDay) =>
         '$amount $unitLabel × $occurrencesPerDay نوبت در روز',
-      EveryNDaysConsumptionSchedule(:final intervalDays) => intervalDays == 1
-          ? '$amount $unitLabel روزی یک نوبت'
-          : '$amount $unitLabel هر $intervalDays روز یک‌بار',
-      WeeklyConsumptionSchedule(:final weekdays) =>
-        '$amount $unitLabel در ${weekdays.map(weekdayLabel).join('، ')}',
+      EveryNDaysConsumptionSchedule(:final intervalDays) =>
+        intervalDays == 1
+            ? '$amount $unitLabel روزی یک نوبت'
+            : '$amount $unitLabel هر $intervalDays روز یک‌بار',
     };
   }
 

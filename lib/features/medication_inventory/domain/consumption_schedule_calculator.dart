@@ -88,7 +88,9 @@ abstract final class ConsumptionScheduleCalculator {
       occurrenceNumber: high,
     ).isAfter(at)) {
       if (high > 1 << 52) {
-        throw StateError('Consumption occurrence count is outside safe bounds.');
+        throw StateError(
+          'Consumption occurrence count is outside safe bounds.',
+        );
       }
       high *= 2;
     }
@@ -121,9 +123,7 @@ abstract final class ConsumptionScheduleCalculator {
     return switch (schedule) {
       DailyConsumptionSchedule(:final occurrencesPerDay) => _addMicroseconds(
         baseline,
-        occurrenceNumber *
-            Duration.microsecondsPerDay /
-            occurrencesPerDay,
+        occurrenceNumber * Duration.microsecondsPerDay / occurrencesPerDay,
       ),
       EveryNDaysConsumptionSchedule(:final intervalDays) => _addMicroseconds(
         baseline,
@@ -169,9 +169,7 @@ abstract final class ConsumptionScheduleCalculator {
                 Duration.microsecondsPerDay +
             2,
       EveryNDaysConsumptionSchedule(:final intervalDays) =>
-        elapsedMicroseconds ~/
-                (Duration.microsecondsPerDay * intervalDays) +
-            2,
+        elapsedMicroseconds ~/ (Duration.microsecondsPerDay * intervalDays) + 2,
       WeeklyConsumptionSchedule(:final weekdays) =>
         (at.difference(baseline).inDays ~/ 7 + 2) * weekdays.length + 1,
     };

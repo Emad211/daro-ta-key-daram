@@ -29,16 +29,24 @@ abstract final class ConsumptionScheduleCodec {
     try {
       decoded = jsonDecode(source);
     } on FormatException catch (error) {
-      throw FormatException('Invalid consumption schedule JSON.', source, error.offset);
+      throw FormatException(
+        'Invalid consumption schedule JSON.',
+        source,
+        error.offset,
+      );
     }
 
     if (decoded is! Map<String, Object?>) {
-      throw const FormatException('Consumption schedule must be a JSON object.');
+      throw const FormatException(
+        'Consumption schedule must be a JSON object.',
+      );
     }
 
     final int version = _readInt(decoded, 'version');
     if (version != currentVersion) {
-      throw FormatException('Unsupported consumption schedule version: $version');
+      throw FormatException(
+        'Unsupported consumption schedule version: $version',
+      );
     }
 
     final String kindName = _readString(decoded, 'kind');
@@ -102,14 +110,16 @@ abstract final class ConsumptionScheduleCodec {
     if (value is! List<Object?>) {
       throw FormatException('Expected an integer list for "$key".');
     }
-    return value.map((Object? item) {
-      if (item is int) {
-        return item;
-      }
-      if (item is double && item.isFinite && item == item.roundToDouble()) {
-        return item.toInt();
-      }
-      throw FormatException('Expected integers inside "$key".');
-    }).toList(growable: false);
+    return value
+        .map((Object? item) {
+          if (item is int) {
+            return item;
+          }
+          if (item is double && item.isFinite && item == item.roundToDouble()) {
+            return item.toInt();
+          }
+          throw FormatException('Expected integers inside "$key".');
+        })
+        .toList(growable: false);
   }
 }
