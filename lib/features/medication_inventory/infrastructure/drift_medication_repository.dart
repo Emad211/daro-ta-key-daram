@@ -97,9 +97,7 @@ final class DriftMedicationRepository implements MedicationRepository {
   @override
   Future<void> create(Medication medication) async {
     final DateTime now = _nowUtc();
-    final DateTime effectiveAt = _normalizeUtc(
-      medication.inventoryRecordedAt,
-    );
+    final DateTime effectiveAt = _normalizeUtc(medication.inventoryRecordedAt);
     if (effectiveAt.isAfter(now)) {
       throw ArgumentError.value(
         medication.inventoryRecordedAt,
@@ -117,22 +115,24 @@ final class DriftMedicationRepository implements MedicationRepository {
         throw StateError('An aggregate with this identifier already exists.');
       }
 
-      await _database.into(_database.medications).insert(
-        MedicationsCompanion(
-          id: Value<String>(medication.id),
-          name: Value<String>(medication.name),
-          unit: Value<String>(medication.unit.name),
-          unitsPerDay: Value<double>(medication.unitsPerDay),
-          consumptionScheduleJson: Value<String>(
-            ConsumptionScheduleCodec.encode(medication.consumptionSchedule),
-          ),
-          alertLeadDays: Value<int>(medication.alertLeadDays),
-          notes: Value<String?>(medication.notes),
-          isArchived: Value<bool>(medication.isArchived),
-          createdAt: Value<DateTime>(now),
-          updatedAt: Value<DateTime>(now),
-        ),
-      );
+      await _database
+          .into(_database.medications)
+          .insert(
+            MedicationsCompanion(
+              id: Value<String>(medication.id),
+              name: Value<String>(medication.name),
+              unit: Value<String>(medication.unit.name),
+              unitsPerDay: Value<double>(medication.unitsPerDay),
+              consumptionScheduleJson: Value<String>(
+                ConsumptionScheduleCodec.encode(medication.consumptionSchedule),
+              ),
+              alertLeadDays: Value<int>(medication.alertLeadDays),
+              notes: Value<String?>(medication.notes),
+              isArchived: Value<bool>(medication.isArchived),
+              createdAt: Value<DateTime>(now),
+              updatedAt: Value<DateTime>(now),
+            ),
+          );
       await _insertInventoryEvent(
         InventoryEvent(
           id: _uuid.v4(),
@@ -173,10 +173,9 @@ final class DriftMedicationRepository implements MedicationRepository {
           previous.consumptionSchedule != update.consumptionSchedule;
       final Medication updated = update.applyTo(previous);
 
-      await (_database.update(_database.medications)
-            ..where(
-              (Medications table) => table.id.equals(update.medicationId),
-            ))
+      await (_database.update(
+            _database.medications,
+          )..where((Medications table) => table.id.equals(update.medicationId)))
           .write(
             MedicationsCompanion(
               name: Value<String>(updated.name),

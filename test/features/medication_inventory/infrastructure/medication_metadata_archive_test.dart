@@ -12,40 +12,43 @@ void main() {
   final DateTime baseline = DateTime.utc(2026, 7, 1, 8);
   final DateTime changeTime = DateTime.utc(2026, 7, 3, 8);
 
-  test('details-only update preserves schedule and inventory history', () async {
-    final AppDatabase database = AppDatabase(NativeDatabase.memory());
-    final DriftMedicationRepository repository = DriftMedicationRepository(
-      database,
-      clock: () => changeTime,
-    );
-    addTearDown(database.close);
+  test(
+    'details-only update preserves schedule and inventory history',
+    () async {
+      final AppDatabase database = AppDatabase(NativeDatabase.memory());
+      final DriftMedicationRepository repository = DriftMedicationRepository(
+        database,
+        clock: () => changeTime,
+      );
+      addTearDown(database.close);
 
-    final Medication initial = _dailyMedication(baseline);
-    await repository.create(initial);
-    await repository.updateDetails(
-      MedicationDetailsUpdate(
-        medicationId: initial.id,
-        name: 'متفورمین ۵۰۰',
-        unit: MedicationUnit.capsule,
-        consumptionSchedule: initial.consumptionSchedule,
-        alertLeadDays: 9,
-      ),
-    );
+      final Medication initial = _dailyMedication(baseline);
+      await repository.create(initial);
+      await repository.updateDetails(
+        MedicationDetailsUpdate(
+          medicationId: initial.id,
+          name: 'متفورمین ۵۰۰',
+          unit: MedicationUnit.capsule,
+          consumptionSchedule: initial.consumptionSchedule,
+          alertLeadDays: 9,
+        ),
+      );
 
-    final Medication? updated = await repository.findById(initial.id);
-    final List<InventoryEventRow> events = await database
-        .select(database.inventoryEvents)
-        .get();
+      final Medication? updated = await repository.findById(initial.id);
+      final List<InventoryEventRow> events = await database
+          .select(database.inventoryEvents)
+          .get();
 
-    expect(updated?.name, 'متفورمین ۵۰۰');
-    expect(updated?.unit, MedicationUnit.capsule);
-    expect(updated?.consumptionSchedule, initial.consumptionSchedule);
-    expect(updated?.alertLeadDays, 9);
-    expect(updated?.notes, isNull);
-    expect(updated?.stockAtRecord, initial.stockAtRecord);
-    expect(updated?.inventoryRecordedAt.toUtc(), baseline);
-    expect(events, hasLength(1));
-  });
+      expect(updated?.name, 'متفورمین ۵۰۰');
+      expect(updated?.unit, MedicationUnit.capsule);
+      expect(updated?.consumptionSchedule, initial.consumptionSchedule);
+      expect(updated?.alertLeadDays, 9);
+      expect(updated?.notes, isNull);
+      expect(updated?.stockAtRecord, initial.stockAtRecord);
+      expect(updated?.inventoryRecordedAt.toUtc(), baseline);
+      expect(events, hasLength(1));
+    },
+  );
 
   test('schedule update creates one current-stock boundary', () async {
     final AppDatabase database = AppDatabase(NativeDatabase.memory());
@@ -105,10 +108,7 @@ void main() {
 
     await expectLater(repository.create(initial), throwsStateError);
     expect(await database.select(database.medications).get(), hasLength(1));
-    expect(
-      await database.select(database.inventoryEvents).get(),
-      hasLength(1),
-    );
+    expect(await database.select(database.inventoryEvents).get(), hasLength(1));
   });
 
   test('archived stream preserves history across restore', () async {
