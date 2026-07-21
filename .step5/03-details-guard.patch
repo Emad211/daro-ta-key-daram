@@ -1,0 +1,97 @@
+--- a/lib/features/medication_inventory/presentation/screens/medication_details_screen.dart
++++ b/lib/features/medication_inventory/presentation/screens/medication_details_screen.dart
+@@ -57,20 +57,22 @@
+     return Scaffold(
+       appBar: AppBar(
+         title: Text(medication.name),
+-        actions: <Widget>[
+-          IconButton(
+-            tooltip: 'ویرایش مشخصات',
+-            onPressed: () => context.goNamed(
+-              'edit-medication',
+-              pathParameters: <String, String>{'medicationId': medication.id},
++        actions: medication.isArchived
++            ? const <Widget>[]
++            : <Widget>[
++                IconButton(
++                  tooltip: 'ویرایش مشخصات',
++                  onPressed: () => context.goNamed(
++                    'edit-medication',
++                    pathParameters: <String, String>{
++                      'medicationId': medication.id,
++                    },
++                  ),
++                  icon: const Icon(Icons.edit_outlined),
++                ),
++                IconButton(
++                  tooltip: 'آرشیو دارو',
++                  onPressed: () => _archive(context, ref),
++                  icon: const Icon(Icons.archive_outlined),
++                ),
++              ],
+-            ),
+-            icon: const Icon(Icons.edit_outlined),
+-          ),
+-          IconButton(
+-            tooltip: 'آرشیو دارو',
+-            onPressed: () => _archive(context, ref),
+-            icon: const Icon(Icons.archive_outlined),
+-          ),
+-        ],
+       ),
+@@ -79,12 +81,18 @@
+           children: <Widget>[
++            if (medication.isArchived) ...<Widget>[
++              const _ArchivedNotice(),
++              const SizedBox(height: 14),
++            ],
+             _StockSummaryCard(medication: medication, snapshot: snapshot),
+-            const SizedBox(height: 14),
+-            _ActionCard(
+-              onRestock: () =>
+-                  _showInventoryForm(context, InventoryEventType.restock),
+-              onCorrection: () =>
+-                  _showInventoryForm(context, InventoryEventType.correction),
+-            ),
++            if (!medication.isArchived) ...<Widget>[
++              const SizedBox(height: 14),
++              _ActionCard(
++                onRestock: () =>
++                    _showInventoryForm(context, InventoryEventType.restock),
++                onCorrection: () =>
++                    _showInventoryForm(context, InventoryEventType.correction),
++              ),
++            ],
+             const SizedBox(height: 14),
+@@ -188,6 +196,29 @@
+   }
+ }
+ 
++class _ArchivedNotice extends StatelessWidget {
++  const _ArchivedNotice();
++
++  @override
++  Widget build(BuildContext context) {
++    return Card(
++      child: Padding(
++        padding: const EdgeInsets.all(16),
++        child: Row(
++          children: <Widget>[
++            Icon(
++              Icons.inventory_2_outlined,
++              color: Theme.of(context).colorScheme.primary,
++            ),
++            const SizedBox(width: 12),
++            const Expanded(
++              child: Text(
++                'این دارو آرشیو شده و فقط برای مشاهده در دسترس است. برای تغییر اطلاعات یا موجودی، ابتدا آن را بازیابی کنید.',
++              ),
++            ),
++          ],
++        ),
++      ),
++    );
++  }
++}
++
+ class _StockSummaryCard extends StatelessWidget {
