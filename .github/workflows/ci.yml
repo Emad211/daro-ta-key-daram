@@ -33,6 +33,22 @@ jobs:
       - name: Verify committed Android platform
         run: test -f android/app/build.gradle.kts
 
+      - name: Verify signing material is untracked
+        shell: bash
+        run: |
+          set -euo pipefail
+          tracked="$(git ls-files \
+            'android/key.properties' \
+            '*.jks' \
+            '*.keystore' \
+            '*.p12' \
+            '*.pfx' \
+            '*.pem' \
+            '*.der')"
+          test -z "$tracked"
+          git check-ignore --no-index android/key.properties android/upload-keystore.jks
+          ! grep -F 'signingConfigs.getByName("debug")' android/app/build.gradle.kts
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -111,7 +127,8 @@ jobs:
           set -euo pipefail
           bundle=build/app/outputs/bundle/release/app-release.aab
           test -f "$bundle"
-          jarsigner -verify -strict -certs "$bundle"
+          jarsigner -verify -verbose -certs "$bundle" | tee /tmp/aab-signature.log
+          grep -F 'jar verified.' /tmp/aab-signature.log
           sha256sum "$bundle" > "$bundle.sha256"
 
       - name: Upload debug APK
