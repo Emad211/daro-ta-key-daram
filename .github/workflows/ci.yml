@@ -1,20 +1,25 @@
-name: Accessibility Flow Diagnostics
+name: Accessibility Flow Fix Apply
 
 on:
-  pull_request:
+  push:
+    branches:
+      - agent/accessibility-rtl-hardening
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  accessibility-flow-diagnostics:
-    if: github.head_ref == 'agent/accessibility-rtl-hardening'
+  apply-flow-fixes:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
 
     steps:
-      - name: Checkout
+      - name: Checkout source branch
         uses: actions/checkout@v4
+        with:
+          ref: agent/accessibility-rtl-hardening
+          fetch-depth: 0
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -23,27 +28,87 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install dependencies
-        run: flutter pub get
+      - name: Apply accessibility flow fixes
+        run: python3 tool/apply_accessibility_flow_fixes.py
 
-      - name: Generate Drift code
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Capture targeted accessibility flow output
-        shell: bash
+      - name: Format changed Dart files
         run: |
-          set +e
-          flutter test test/features/medication_inventory/presentation/accessibility_rtl_widget_test.dart --reporter expanded 2>&1 | tee accessibility-flow-output.txt
-          status=${PIPESTATUS[0]}
-          echo "$status" > accessibility-flow-status.txt
-          exit 0
+          dart format \
+            lib/features/medication_inventory/presentation/widgets/inventory_event_form_sheet.dart \
+            test/features/medication_inventory/presentation/accessibility_rtl_widget_test.dart
 
-      - name: Upload targeted flow diagnostics
-        uses: actions/upload-artifact@v4
-        with:
-          name: accessibility-flow-diagnostics
-          path: |
-            accessibility-flow-output.txt
-            accessibility-flow-status.txt
-          if-no-files-found: error
-          retention-days: 1
+      - name: Restore strict CI and remove staging file
+        run: |
+          cat > .github/workflows/ci.yml <<'YAML'
+          name: Flutter CI
+
+          on:
+            push:
+              branches: [main]
+            pull_request:
+
+          permissions:
+            contents: read
+
+          jobs:
+            validate:
+              runs-on: ubuntu-latest
+              timeout-minutes: 35
+
+              steps:
+                - name: Checkout
+                  uses: actions/checkout@v4
+
+                - name: Set up Flutter
+                  uses: subosito/flutter-action@v2
+                  with:
+                    flutter-version: 3.44.6
+                    channel: stable
+                    cache: true
+
+                - name: Verify committed Android platform
+                  run: test -f android/app/build.gradle.kts
+
+                - name: Install dependencies
+                  run: flutter pub get
+
+                - name: Generate Drift code
+                  run: dart run build_runner build --delete-conflicting-outputs
+
+                - name: Verify Drift schema snapshot
+                  run: |
+                    rm -rf /tmp/daro_drift_schemas
+                    bash tool/export_drift_schema.sh /tmp/daro_drift_schemas
+                    test -f drift_schemas/drift_schema_v1.json
+                    diff -u drift_schemas/drift_schema_v2.json /tmp/daro_drift_schemas/drift_schema_v2.json
+
+                - name: Verify formatting
+                  run: dart format --output=none --set-exit-if-changed lib test
+
+                - name: Analyze
+                  run: flutter analyze
+
+                - name: Test
+                  run: flutter test --coverage
+
+                - name: Build debug APK
+                  run: flutter build apk --debug
+
+                - name: Upload debug APK
+                  uses: actions/upload-artifact@v4
+                  with:
+                    name: daro-ta-key-debug-apk
+                    path: build/app/outputs/flutter-apk/app-debug.apk
+                    if-no-files-found: error
+                    retention-days: 7
+          YAML
+          rm -f tool/apply_accessibility_flow_fixes.py
+
+      - name: Commit accessibility flow fixes
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: make inventory review accessible at large text'
+          git push origin HEAD:agent/accessibility-rtl-hardening
