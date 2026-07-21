@@ -192,7 +192,7 @@ final class DriftMedicationRepository implements MedicationRepository {
         throw StateError('The aggregate has no baseline event.');
       }
 
-      final Medication previous = _toMedicationDomain(existing, latest);
+      final Medication previous = _toMedicationDomain(existing!, latest);
       final bool scheduleChanged =
           previous.consumptionSchedule != update.consumptionSchedule;
       final Medication updated = update.applyTo(previous);
