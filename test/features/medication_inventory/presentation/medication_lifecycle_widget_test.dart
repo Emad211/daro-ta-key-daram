@@ -64,7 +64,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(historyTitle, findsOneWidget);
-    expect(find.text('40 قرص'), findsOneWidget);
+    expect(find.text('40\nقرص'), findsOneWidget);
     expect(find.text('خرید مجدد'), findsWidgets);
     expect(find.text('خرید مجدد با موفقیت ثبت شد.'), findsOneWidget);
   });
