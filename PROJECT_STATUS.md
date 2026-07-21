@@ -18,11 +18,11 @@ Physical-device verification, permanent release key setup, and closed-beta prepa
 - [x] Privacy center, atomic medication-data deletion, and Persian privacy-policy draft
 - [x] Android release signing without debug fallback and disposable-key AAB validation
 
-## Current engineering increment — Issue `#28`, draft PR `#29`
+## Validated for merge in PR `#29`
 
 The increment was triggered by a physical-device installation failure in SAI. SAI received a `content://` document whose provider returned a null `DISPLAY_NAME`. The failure occurred before Android parsed or verified the APK.
 
-Implemented in the branch:
+Validated changes:
 
 - Secret-backed **Android Signed Release** workflow builds both a universal release APK and a store-candidate AAB.
 - Both files use the same commit, version inputs, and permanent upload signing identity.
@@ -32,10 +32,16 @@ Implemented in the branch:
 - Artifact contains APK, AAB, checksums, build metadata, and Persian installation instructions.
 - Instructions explicitly require extracting the GitHub artifact ZIP and opening the APK with Android Package Installer rather than SAI.
 - Local release script builds and verifies both APK and AAB.
-- Strict CI builds an ephemeral signed release APK and AAB, validates both signatures, and keeps the disposable key outside Git.
+- Strict CI builds an ephemeral signed release APK and AAB and validates both signatures without committing the key.
 - Device runbook covers clean install, signature mismatch, persistence, notifications, privacy erasure, TalkBack, largest text, upgrade, ADB installation, and closed-beta exit criteria.
+- Strict Flutter CI run `#356` passed source checks, the full regression suite, debug APK, ephemeral release APK, `apksigner`, release AAB, `jarsigner`, checksums, artifact upload, and cleanup.
 
-The PR remains draft until the exact-head strict CI run passes source checks, the complete regression suite, debug APK, ephemeral release APK verification, release AAB verification, checksums, artifact upload, and cleanup.
+## Validation artifacts
+
+- Debug APK artifact digest: `sha256:b9f69cfb124a5f78a993f54e4f1715df59c7c49e04dacb5e87b5d1a52ba1d347`
+- CI release-validation artifact digest: `sha256:dc66a84182bef6d4c47600a6d8dac35dd7678693b11713ed64ae42839705e907`
+
+The disposable-key release APK and AAB prove the build and signature path only. They must not establish store ownership or permanent upgrade continuity.
 
 ## Direct debug APK currently available
 
@@ -70,7 +76,7 @@ A debug build may not upgrade directly to the future permanently signed internal
 
 ## Next engineering increments
 
-1. Complete and merge PR `#29` after strict APK/AAB validation.
+1. Merge PR `#29` after the final exact-head documentation CI run.
 2. Create and protect the permanent upload key and configure repository secrets.
 3. Produce the first permanently signed internal APK and store-candidate AAB.
 4. Execute and record physical-device installation, notification, privacy, accessibility, and upgrade checks.
@@ -81,5 +87,5 @@ A debug build may not upgrade directly to the future permanently signed internal
 
 - GitHub repository: `Emad211/daro-ta-key-daram`
 - Default branch: `main`
-- Active signed-APK/device-validation PR: `#29`
+- Signed-APK/device-validation PR ready for final validation: `#29`
 - Repository and strict CI are the source of truth for subsequent engineering work.
