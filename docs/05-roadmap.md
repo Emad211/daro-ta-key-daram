@@ -72,10 +72,13 @@
 - [x] RTL and large-font tests در مقیاس‌های ۱٫۰، ۱٫۳ و ۲٫۰
 - [ ] TalkBack، display-size و gesture audit روی دستگاه فیزیکی
 - [ ] integration tests روی دستگاه
-- [ ] حذف debug signing از release و fail-fast بدون کلید معتبر
-- [ ] ساخت و بررسی AAB امضاشده با کلید موقت در CI
+- [x] حذف debug signing از release و fail-fast بدون کلید معتبر
+- [x] ساخت و بررسی AAB امضاشده با کلید موقت در CI
+- [x] اعتبارسنجی signing محلی و environment-backed در CI
+- [x] workflow دستی امن برای ساخت AAB با GitHub Secrets
 - [ ] ساخت upload keystore دائمی و backup رمزگذاری‌شده توسط مالک پروژه
-- [ ] تنظیم GitHub Secrets و ساخت AAB امضاشدهٔ داخلی
+- [ ] تنظیم چهار GitHub Secret و ساخت نخستین AAB کاندید انتشار
+- [ ] privacy center و حذف اتمیک همه داده‌های محلی — Issue `#26`
 - [ ] closed beta با ۱۰ تا ۲۰ کاربر
 - [ ] privacy policy و store listing
 - [ ] انتشار در کافه‌بازار و مایکت
