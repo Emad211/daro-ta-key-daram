@@ -145,10 +145,7 @@ Future<void> _scrollTo(
   await tester.pumpAndSettle();
 }
 
-Future<void> _dragSheetUntilVisible(
-  WidgetTester tester,
-  Finder target,
-) async {
+Future<void> _dragSheetUntilVisible(WidgetTester tester, Finder target) async {
   final double logicalWidth =
       tester.view.physicalSize.width / tester.view.devicePixelRatio;
   final double logicalHeight =
