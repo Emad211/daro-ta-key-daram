@@ -85,6 +85,7 @@ class _ConsumptionScheduleInputState extends State<ConsumptionScheduleInput> {
             DropdownButtonFormField<ConsumptionScheduleKind>(
               key: const Key('schedule-kind'),
               initialValue: _kind,
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'نوع برنامه',
                 prefixIcon: Icon(Icons.event_repeat_outlined),
@@ -94,7 +95,11 @@ class _ConsumptionScheduleInputState extends State<ConsumptionScheduleInput> {
                     (ConsumptionScheduleKind kind) =>
                         DropdownMenuItem<ConsumptionScheduleKind>(
                           value: kind,
-                          child: Text(kind.persianLabel),
+                          child: Text(
+                            kind.persianLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                   )
                   .toList(growable: false),
