@@ -6,7 +6,7 @@
 
 ## وضعیت پروژه
 
-**مرحله فعلی: Phase 3 — اعلان محلی Android و آماده‌سازی تست دستگاه**
+**مرحله فعلی: Phase 5 — release engineering و آماده‌سازی تست دستگاه**
 
 موارد اصلی پیاده‌سازی‌شده:
 
@@ -22,7 +22,9 @@
 - حفظ schedule پس از reboot و app update
 - fallback timezone و failure isolation
 - Android project متعهدشده با application ID `ir.emadkarimi.darutakey`
-- CI شامل code generation، schema parity، format، analyze، test و build APK
+- تست خودکار RTL و متن بزرگ در مقیاس‌های ۱٫۰، ۱٫۳ و ۲٫۰
+- release signing صریح بدون fallback به کلید debug
+- CI شامل code generation، schema parity، format، analyze، test، debug APK و release AAB validation
 
 ## مدل کسب‌وکار
 
@@ -62,7 +64,17 @@ bash tool/bootstrap.sh
 build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-CI نیز همین APK را با نام `daro-ta-key-debug-apk` برای هفت روز نگه می‌دارد.
+CI نیز APK را با نام `daro-ta-key-debug-apk` برای هفت روز نگه می‌دارد.
+
+## Release signing و AAB
+
+ساخت release عمداً بدون `android/key.properties` و upload keystore معتبر متوقف می‌شود. release هیچ‌گاه با کلید debug امضا نمی‌شود.
+
+راهنمای کامل تولید کلید، backup، GitHub Secrets و workflow دستی:
+
+[`docs/08-android-release-signing.md`](docs/08-android-release-signing.md)
+
+CI یک AAB با کلید موقت تولید می‌کند تا مسیر release را اعتبارسنجی کند. این artifact برای store upload نیست. AAB کاندید انتشار فقط از workflow دستی **Android Signed Release** و کلید دائمی مالک پروژه ساخته می‌شود.
 
 ## اعلان‌ها
 
@@ -114,6 +126,7 @@ test/
 5. notification failure موجب rollback داده دارویی نمی‌شود.
 6. تغییر schema بدون snapshot و migration معتبر وارد `main` نمی‌شود.
 7. خرید مجدد به‌عنوان موجودی کل جدید ثبت می‌شود.
+8. release بدون signing material معتبر تولید نمی‌شود و هرگز به debug signing برنمی‌گردد.
 
 ## اسناد مهندسی
 
@@ -125,6 +138,8 @@ test/
 - [نقشه راه](docs/05-roadmap.md)
 - [طراحی persistence](docs/06-persistence-design.md)
 - [معماری اعلان‌ها](docs/07-notifications.md)
+- [راهنمای Android release signing](docs/08-android-release-signing.md)
+- [ماتریس تست دسترس‌پذیری](docs/06-accessibility-test-matrix.md)
 - [تصمیم‌های معماری](docs/adr/)
 
 ## نام و شناسه
