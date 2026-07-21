@@ -149,7 +149,6 @@ Medication _medication(DateTime now) {
     stockAtRecord: 30,
     unitsPerDay: 2,
     inventoryRecordedAt: now,
-    alertLeadDays: 5,
     notes: 'توضیح طولانی برای بررسی شکستن خطوط در چیدمان راست‌به‌چپ.',
   );
 }
