@@ -55,6 +55,7 @@ class _InventoryEventFormSheetState
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
+            key: const Key('inventory-event-scroll'),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,6 +225,7 @@ class _InventoryEventFormSheetState
     return await showDialog<bool>(
           context: context,
           builder: (BuildContext context) => AlertDialog(
+            scrollable: true,
             title: Text('بازبینی ${widget.type.persianLabel}'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
