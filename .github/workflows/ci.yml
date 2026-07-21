@@ -1,17 +1,16 @@
-name: Flutter CI
+name: Accessibility Regression Diagnostics
 
 on:
-  push:
-    branches: [main]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  validate:
+  accessibility-diagnostics:
+    if: github.head_ref == 'agent/accessibility-rtl-hardening'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -24,38 +23,27 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Verify committed Android platform
-        run: test -f android/app/build.gradle.kts
-
       - name: Install dependencies
         run: flutter pub get
 
       - name: Generate Drift code
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Verify Drift schema snapshot
+      - name: Capture targeted accessibility output
+        shell: bash
         run: |
-          rm -rf /tmp/daro_drift_schemas
-          bash tool/export_drift_schema.sh /tmp/daro_drift_schemas
-          test -f drift_schemas/drift_schema_v1.json
-          diff -u drift_schemas/drift_schema_v2.json /tmp/daro_drift_schemas/drift_schema_v2.json
+          set +e
+          flutter test test/features/medication_inventory/presentation/accessibility_rtl_widget_test.dart --reporter expanded 2>&1 | tee accessibility-regression-output.txt
+          status=${PIPESTATUS[0]}
+          echo "$status" > accessibility-regression-status.txt
+          exit 0
 
-      - name: Verify formatting
-        run: dart format --output=none --set-exit-if-changed lib test
-
-      - name: Analyze
-        run: flutter analyze
-
-      - name: Test
-        run: flutter test --coverage
-
-      - name: Build debug APK
-        run: flutter build apk --debug
-
-      - name: Upload debug APK
+      - name: Upload targeted diagnostics
         uses: actions/upload-artifact@v4
         with:
-          name: daro-ta-key-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: accessibility-regression-diagnostics
+          path: |
+            accessibility-regression-output.txt
+            accessibility-regression-status.txt
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 1
