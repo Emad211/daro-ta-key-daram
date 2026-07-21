@@ -1,0 +1,26 @@
+import '../application/medication_lifecycle.dart';
+
+abstract final class MedicationCommandFailureMessage {
+  static String resolve(Object error, {required String fallback}) {
+    if (error is MedicationNotFoundException) {
+      return 'این دارو دیگر در دسترس نیست. صفحه را تازه‌سازی کنید.';
+    }
+    if (error is MedicationLifecycleViolation) {
+      return switch (error.state) {
+        MedicationLifecycleState.archived =>
+          'این دارو آرشیو شده است. ابتدا آن را بازیابی کنید.',
+        MedicationLifecycleState.active =>
+          'این عملیات در وضعیت فعلی دارو قابل انجام نیست.',
+        MedicationLifecycleState.missing =>
+          'این دارو دیگر در دسترس نیست. صفحه را تازه‌سازی کنید.',
+      };
+    }
+    if (error is ArgumentError || error is FormatException) {
+      return 'اطلاعات واردشده معتبر نیست. موارد فرم را دوباره بررسی کنید.';
+    }
+    if (error is StateError) {
+      return 'اطلاعات در این فاصله تغییر کرده است. صفحه را تازه‌سازی کنید.';
+    }
+    return fallback;
+  }
+}

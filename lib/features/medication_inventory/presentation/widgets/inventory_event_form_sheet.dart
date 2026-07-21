@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/input/localized_number_parser.dart';
 import '../../domain/inventory_event.dart';
 import '../../domain/medication.dart';
+import '../medication_command_failure_message.dart';
 import '../providers/medication_providers.dart';
 
 class InventoryEventFormSheet extends ConsumerStatefulWidget {
@@ -27,7 +28,10 @@ class _InventoryEventFormSheetState
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _stockController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
+  bool _isReviewing = false;
   bool _isSaving = false;
+
+  bool get _isBusy => _isReviewing || _isSaving;
 
   @override
   void dispose() {
@@ -66,7 +70,7 @@ class _InventoryEventFormSheetState
                       ),
                     ),
                     IconButton(
-                      onPressed: _isSaving ? null : Navigator.of(context).pop,
+                      onPressed: _isBusy ? null : Navigator.of(context).pop,
                       tooltip: 'بستن',
                       icon: const Icon(Icons.close),
                     ),
@@ -85,6 +89,7 @@ class _InventoryEventFormSheetState
                 ),
                 const SizedBox(height: 18),
                 TextFormField(
+                  key: const Key('inventory-stock-input'),
                   controller: _stockController,
                   autofocus: true,
                   keyboardType: const TextInputType.numberWithOptions(
@@ -107,6 +112,7 @@ class _InventoryEventFormSheetState
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
+                  key: const Key('inventory-note-input'),
                   controller: _noteController,
                   minLines: 2,
                   maxLines: 4,
@@ -120,14 +126,21 @@ class _InventoryEventFormSheetState
                 const _SafetyNotice(),
                 const SizedBox(height: 20),
                 FilledButton.icon(
-                  onPressed: _isSaving ? null : _save,
+                  key: const Key('review-inventory-event'),
+                  onPressed: _isBusy ? null : _save,
                   icon: _isSaving
                       ? const SizedBox.square(
                           dimension: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.check),
-                  label: Text(_isSaving ? 'در حال ثبت...' : 'ثبت موجودی جدید'),
+                      : const Icon(Icons.fact_check_outlined),
+                  label: Text(
+                    _isSaving
+                        ? 'در حال ثبت...'
+                        : _isReviewing
+                        ? 'در حال بازبینی...'
+                        : 'بازبینی و ثبت',
+                  ),
                 ),
               ],
             ),
@@ -138,15 +151,31 @@ class _InventoryEventFormSheetState
   }
 
   Future<void> _save() async {
+    if (_isBusy) {
+      return;
+    }
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
 
-    setState(() => _isSaving = true);
+    final double stockUnits = LocalizedNumberParser.tryParseDouble(
+      _stockController.text,
+    )!;
+    setState(() => _isReviewing = true);
+    final bool confirmed = await _review(stockUnits);
+    if (!mounted) {
+      return;
+    }
+    if (!confirmed) {
+      setState(() => _isReviewing = false);
+      return;
+    }
+    setState(() {
+      _isReviewing = false;
+      _isSaving = true;
+    });
+
     try {
-      final double stockUnits = LocalizedNumberParser.tryParseDouble(
-        _stockController.text,
-      )!;
       await ref
           .read(inventoryEventServiceProvider)
           .record(
@@ -162,19 +191,81 @@ class _InventoryEventFormSheetState
       if (mounted) {
         Navigator.of(context).pop(true);
       }
-    } on Object {
+    } on Object catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ثبت موجودی انجام نشد. دوباره تلاش کنید.'),
+          SnackBar(
+            content: Text(
+              MedicationCommandFailureMessage.resolve(
+                error,
+                fallback: 'ثبت موجودی انجام نشد. دوباره تلاش کنید.',
+              ),
+            ),
           ),
         );
       }
     } finally {
       if (mounted) {
-        setState(() => _isSaving = false);
+        setState(() {
+          _isReviewing = false;
+          _isSaving = false;
+        });
       }
     }
+  }
+
+  Future<bool> _review(double stockUnits) async {
+    final DateTime now = ref.read(clockProvider)();
+    final double currentStock = widget.medication
+        .stockAt(now)
+        .estimatedRemainingUnits;
+    final String unit = widget.medication.unit.persianLabel;
+
+    return await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: Text('بازبینی ${widget.type.persianLabel}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('موجودی تخمینی فعلی: ${_number(currentStock)} $unit'),
+                const SizedBox(height: 8),
+                Text(
+                  'مبنای جدید پس از ثبت: ${_number(stockUnits)} $unit',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'پس از تأیید، یک رویداد جدید در تاریخچه ثبت می‌شود. '
+                  'برای اصلاح اشتباه بعدی، رویداد اصلاحی تازه ثبت کنید.',
+                ),
+              ],
+            ),
+            actions: <Widget>[
+              TextButton(
+                key: const Key('cancel-inventory-event'),
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('بازگشت و ویرایش'),
+              ),
+              FilledButton(
+                key: const Key('confirm-inventory-event'),
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('تأیید و ثبت'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  static String _number(double value) {
+    return value == value.roundToDouble()
+        ? value.toInt().toString()
+        : value
+              .toStringAsFixed(2)
+              .replaceFirst(RegExp(r'0+$'), '')
+              .replaceFirst(RegExp(r'\.$'), '');
   }
 }
 

@@ -9,6 +9,7 @@ import '../../domain/consumption_schedule.dart';
 import '../../domain/consumption_schedule_formatter.dart';
 import '../../domain/medication.dart';
 import '../../domain/medication_unit.dart';
+import '../medication_command_failure_message.dart';
 import '../providers/medication_providers.dart';
 import '../widgets/consumption_schedule_input.dart';
 
@@ -69,7 +70,10 @@ class _EditMedicationFormState extends ConsumerState<_EditMedicationForm> {
   late final TextEditingController _notesController;
   late MedicationUnit _selectedUnit;
   late ConsumptionSchedule? _consumptionSchedule;
+  bool _isReviewingSchedule = false;
   bool _isSaving = false;
+
+  bool get _isBusy => _isReviewingSchedule || _isSaving;
 
   @override
   void initState() {
@@ -187,14 +191,20 @@ class _EditMedicationFormState extends ConsumerState<_EditMedicationForm> {
               const SizedBox(height: 24),
               FilledButton.icon(
                 key: const Key('save-medication-metadata'),
-                onPressed: _isSaving ? null : _save,
+                onPressed: _isBusy ? null : _save,
                 icon: _isSaving
                     ? const SizedBox.square(
                         dimension: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.check),
-                label: Text(_isSaving ? 'در حال ذخیره...' : 'ذخیره تغییرات'),
+                label: Text(
+                  _isSaving
+                      ? 'در حال ذخیره...'
+                      : _isReviewingSchedule
+                      ? 'در حال بازبینی...'
+                      : 'ذخیره تغییرات',
+                ),
               ),
             ],
           ),
@@ -204,6 +214,9 @@ class _EditMedicationFormState extends ConsumerState<_EditMedicationForm> {
   }
 
   Future<void> _save() async {
+    if (_isBusy) {
+      return;
+    }
     if (!(_formKey.currentState?.validate() ?? false) ||
         _consumptionSchedule == null) {
       return;
@@ -211,13 +224,22 @@ class _EditMedicationFormState extends ConsumerState<_EditMedicationForm> {
 
     final ConsumptionSchedule schedule = _consumptionSchedule!;
     if (schedule != widget.medication.consumptionSchedule) {
+      setState(() => _isReviewingSchedule = true);
       final bool confirmed = await _confirmScheduleChange(schedule);
-      if (!confirmed || !mounted) {
+      if (!mounted) {
         return;
       }
+      if (!confirmed) {
+        setState(() => _isReviewingSchedule = false);
+        return;
+      }
+      setState(() {
+        _isReviewingSchedule = false;
+        _isSaving = true;
+      });
+    } else {
+      setState(() => _isSaving = true);
     }
-
-    setState(() => _isSaving = true);
 
     try {
       final MedicationDetailsUpdate update = MedicationDetailsUpdate(
@@ -254,15 +276,25 @@ class _EditMedicationFormState extends ConsumerState<_EditMedicationForm> {
           ),
         );
       }
-    } on Object {
+    } on Object catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ذخیره تغییرات انجام نشد.')),
+          SnackBar(
+            content: Text(
+              MedicationCommandFailureMessage.resolve(
+                error,
+                fallback: 'ذخیره تغییرات انجام نشد. دوباره تلاش کنید.',
+              ),
+            ),
+          ),
         );
       }
     } finally {
       if (mounted) {
-        setState(() => _isSaving = false);
+        setState(() {
+          _isReviewingSchedule = false;
+          _isSaving = false;
+        });
       }
     }
   }

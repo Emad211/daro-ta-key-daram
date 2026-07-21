@@ -7,6 +7,7 @@ import '../../application/medication_repository.dart';
 import '../../domain/consumption_schedule.dart';
 import '../../domain/medication.dart';
 import '../../domain/medication_unit.dart';
+import '../medication_command_failure_message.dart';
 import '../providers/medication_providers.dart';
 import '../widgets/consumption_schedule_input.dart';
 
@@ -182,6 +183,9 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) {
+      return;
+    }
     if (!(_formKey.currentState?.validate() ?? false) ||
         _consumptionSchedule == null) {
       return;
@@ -218,11 +222,16 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
           context,
         ).showSnackBar(const SnackBar(content: Text('دارو با موفقیت ثبت شد.')));
       }
-    } on Object {
+    } on Object catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ذخیره دارو انجام نشد. دوباره تلاش کنید.'),
+          SnackBar(
+            content: Text(
+              MedicationCommandFailureMessage.resolve(
+                error,
+                fallback: 'ذخیره دارو انجام نشد. دوباره تلاش کنید.',
+              ),
+            ),
           ),
         );
       }
