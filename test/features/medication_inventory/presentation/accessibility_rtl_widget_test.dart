@@ -17,99 +17,89 @@ void main() {
   });
 
   for (final double textScale in <double>[1, 1.3, 2]) {
-    testWidgets(
-      'critical RTL flows remain operable at text scale $textScale',
-      (WidgetTester tester) async {
-        _configureViewport(tester, textScale);
-        final SemanticsHandle semantics = tester.ensureSemantics();
-        addTearDown(semantics.dispose);
+    testWidgets('critical RTL flows remain operable at text scale $textScale', (
+      WidgetTester tester,
+    ) async {
+      _configureViewport(tester, textScale);
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      addTearDown(semantics.dispose);
 
-        final Medication active = _medication(now);
-        final Medication archived = Medication(
-          id: 'archived-medication',
-          name: 'داروی آرشیوشده با نام نسبتاً طولانی',
-          unit: MedicationUnit.capsule,
-          stockAtRecord: 12,
-          unitsPerDay: 1,
-          inventoryRecordedAt: now,
-          isArchived: true,
-        );
-        final InMemoryMedicationRepository repository =
-            InMemoryMedicationRepository(
-              seed: <Medication>[active, archived],
-              clock: () => now,
-            );
+      final Medication active = _medication(now);
+      final Medication archived = Medication(
+        id: 'archived-medication',
+        name: 'داروی آرشیوشده با نام نسبتاً طولانی',
+        unit: MedicationUnit.capsule,
+        stockAtRecord: 12,
+        unitsPerDay: 1,
+        inventoryRecordedAt: now,
+        isArchived: true,
+      );
+      final InMemoryMedicationRepository repository =
+          InMemoryMedicationRepository(
+            seed: <Medication>[active, archived],
+            clock: () => now,
+          );
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              medicationRepositoryProvider.overrideWithValue(repository),
-              clockProvider.overrideWithValue(() => now),
-              localNotificationServiceProvider.overrideWithValue(
-                const NoopLocalNotificationService(),
-              ),
-            ],
-            child: const DaroTaKeyApp(),
-          ),
-        );
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            medicationRepositoryProvider.overrideWithValue(repository),
+            clockProvider.overrideWithValue(() => now),
+            localNotificationServiceProvider.overrideWithValue(
+              const NoopLocalNotificationService(),
+            ),
+          ],
+          child: const DaroTaKeyApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        await _openRoute(tester, '/');
-        expect(find.text('دارو تا کی دارم؟'), findsOneWidget);
-        expect(find.bySemanticsLabel('مدیریت آرشیو'), findsOneWidget);
-        expect(
-          find.bySemanticsLabel('فعال‌کردن یادآوری موجودی'),
-          findsOneWidget,
-        );
-        _expectNoFlutterExceptions(tester, 'dashboard at scale $textScale');
+      await _openRoute(tester, '/');
+      expect(find.text('دارو تا کی دارم؟'), findsOneWidget);
+      expect(find.bySemanticsLabel('مدیریت آرشیو'), findsOneWidget);
+      expect(find.bySemanticsLabel('فعال‌کردن یادآوری موجودی'), findsOneWidget);
+      _expectNoFlutterExceptions(tester, 'dashboard at scale $textScale');
 
-        await _openRoute(tester, '/add');
-        final Finder addSave = find.byKey(const Key('save-new-medication'));
-        await _scrollTo(tester, addSave);
-        expect(addSave, findsOneWidget);
-        _expectNoFlutterExceptions(tester, 'add form at scale $textScale');
+      await _openRoute(tester, '/add');
+      final Finder addSave = find.byKey(const Key('save-new-medication'));
+      await _scrollTo(tester, addSave);
+      expect(addSave, findsOneWidget);
+      _expectNoFlutterExceptions(tester, 'add form at scale $textScale');
 
-        await _openRoute(tester, '/medications/${active.id}');
-        expect(find.bySemanticsLabel('ویرایش مشخصات'), findsOneWidget);
-        expect(find.bySemanticsLabel('آرشیو دارو'), findsOneWidget);
-        final Finder restock = find.widgetWithText(FilledButton, 'خرید مجدد');
-        await _scrollTo(tester, restock);
-        await tester.tap(restock);
-        await tester.pumpAndSettle();
-        final Finder stock = find.byKey(const Key('inventory-stock-input'));
-        await tester.enterText(stock, '۴۰');
-        final Finder review = find.byKey(const Key('review-inventory-event'));
-        await _scrollTo(
-          tester,
-          review,
-          scrollable: find.byType(Scrollable).last,
-        );
-        await tester.tap(review);
-        await tester.pumpAndSettle();
-        expect(find.byKey(const Key('confirm-inventory-event')), findsOneWidget);
-        _expectNoFlutterExceptions(
-          tester,
-          'inventory review at scale $textScale',
-        );
-        await tester.tap(find.byKey(const Key('cancel-inventory-event')));
-        await tester.pumpAndSettle();
-        await tester.tapAt(const Offset(12, 12));
-        await tester.pumpAndSettle();
+      await _openRoute(tester, '/medications/${active.id}');
+      expect(find.bySemanticsLabel('ویرایش مشخصات'), findsOneWidget);
+      expect(find.bySemanticsLabel('آرشیو دارو'), findsOneWidget);
+      final Finder restock = find.widgetWithText(FilledButton, 'خرید مجدد');
+      await _scrollTo(tester, restock);
+      await tester.tap(restock);
+      await tester.pumpAndSettle();
+      final Finder stock = find.byKey(const Key('inventory-stock-input'));
+      await tester.enterText(stock, '۴۰');
+      final Finder review = find.byKey(const Key('review-inventory-event'));
+      await _scrollTo(tester, review, scrollable: find.byType(Scrollable).last);
+      await tester.tap(review);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('confirm-inventory-event')), findsOneWidget);
+      _expectNoFlutterExceptions(
+        tester,
+        'inventory review at scale $textScale',
+      );
+      await tester.tap(find.byKey(const Key('cancel-inventory-event')));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(12, 12));
+      await tester.pumpAndSettle();
 
-        await _openRoute(tester, '/medications/${active.id}/edit');
-        final Finder editSave = find.byKey(
-          const Key('save-medication-metadata'),
-        );
-        await _scrollTo(tester, editSave);
-        expect(editSave, findsOneWidget);
-        _expectNoFlutterExceptions(tester, 'edit form at scale $textScale');
+      await _openRoute(tester, '/medications/${active.id}/edit');
+      final Finder editSave = find.byKey(const Key('save-medication-metadata'));
+      await _scrollTo(tester, editSave);
+      expect(editSave, findsOneWidget);
+      _expectNoFlutterExceptions(tester, 'edit form at scale $textScale');
 
-        await _openRoute(tester, '/archive');
-        expect(find.byKey(Key('restore-${archived.id}')), findsOneWidget);
-        expect(find.bySemanticsLabel('حذف دائمی'), findsOneWidget);
-        _expectNoFlutterExceptions(tester, 'archive at scale $textScale');
-      },
-    );
+      await _openRoute(tester, '/archive');
+      expect(find.byKey(Key('restore-${archived.id}')), findsOneWidget);
+      expect(find.bySemanticsLabel('حذف دائمی'), findsOneWidget);
+      _expectNoFlutterExceptions(tester, 'archive at scale $textScale');
+    });
   }
 }
 
