@@ -41,9 +41,9 @@
 - [x] migration نسخه ۱ به ۲ و baseline تغییر برنامه مصرف
 - [x] مرزهای typed برای create/details/inventory/lifecycle
 - [x] state machine فعال، آرشیوشده و حذف‌شده
-- [ ] پیام خطای typed در UI و حفظ فرم پس از شکست
-- [ ] بازبینی قبل از ثبت موجودی و جلوگیری از ارسال تکراری
-- [ ] Undo برای آرشیو و تست عدم side effect در لغو/رد فرمان
+- [x] پیام خطای typed در UI و حفظ فرم پس از شکست
+- [x] بازبینی قبل از ثبت موجودی و جلوگیری از ارسال تکراری
+- [x] Undo برای آرشیو و تست عدم side effect در لغو/رد فرمان
 
 ## Phase 3 — Notifications
 
