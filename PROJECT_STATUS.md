@@ -13,27 +13,27 @@ Privacy controls and physical-device verification before closed beta.
 - [x] Structured daily, every-N-days, and selected-weekday consumption schedules
 - [x] Schema v1-to-v2 migration and schedule-change inventory baselines
 - [x] Hardened stock calculation precision and boundary invariants
-- [x] Typed create, details, quantity, archive, restore, and delete repository commands
+- [x] Typed create, details, quantity, archive, restore, delete, and full-erasure repository commands
 - [x] Explicit active / archived / missing lifecycle state machine
 - [x] Typed Persian command failures, retained form state, duplicate-submit guards, quantity review, schedule confirmation, and archive undo
-- [x] Cancelled and rejected write commands proven to have no persisted aggregate or history side effects
-- [x] Stable notification IDs, permission flow, scheduling, replacement, cancellation, deep links, reboot persistence, and timezone fallback
-- [x] Android project with application ID `ir.emadkarimi.darutakey`
+- [x] Stable notification scheduling, cancellation, deep links, reboot persistence, and timezone fallback
 - [x] Automated Persian RTL and large-text coverage at scales 1.0, 1.3, and 2.0
-- [x] Strict CI for code generation, schema parity, formatting, analyzer, tests, debug APK build, and artifact upload
+- [x] Android release signing without debug fallback, disposable-key AAB validation, and secret-backed manual release workflow
 
-## Validated for merge in PR `#25`
+## Current engineering increment — Issue `#26`, draft PR `#27`
 
-- Android release builds never fall back to debug signing.
-- Release tasks fail explicitly when signing material is missing.
-- Local ignored `android/key.properties` signing is validated.
-- Step-scoped environment signing used by the manual release workflow is validated.
-- Signing files and private-key formats are rejected from Git tracking.
-- Strict Flutter CI run `#309` passed the full source suite, debug APK, release AAB build, JAR signature verification, SHA-256 checksum generation, artifact upload, and signing-material cleanup.
-- The manual **Android Signed Release** workflow validates secrets and version inputs, reconstructs the upload keystore only inside the runner, and removes it after the run.
-- A local release command performs the same source, signing, AAB, signature, and checksum checks.
+- Persian privacy/about center accessible from the dashboard.
+- Clear disclosure of current local medication storage and medical non-goals.
+- One typed `deleteAll` repository command.
+- Drift transaction removes every medication aggregate; inventory history follows by foreign-key cascade.
+- Unrelated app preferences remain outside medication-domain erasure.
+- Dedicated application service deletes persistence first and then clears notifications.
+- Typed outcome distinguishes complete success from pending notification cleanup.
+- Notification cleanup can be retried without pretending medication data was restored.
+- Destructive confirmation, duplicate-submit guard, Persian feedback, and text-scale 2.0 coverage.
+- Public-facing Persian privacy-policy draft with explicit pre-publication placeholders.
 
-The downloaded CI AAB is signed by a disposable key and is **not** a store-candidate artifact.
+The increment remains draft until schema parity, formatting, analyzer, full tests, debug APK, and disposable-key release AAB validation pass.
 
 ## Maintainer-owned release material still required
 
@@ -41,11 +41,6 @@ The downloaded CI AAB is signed by a disposable key and is **not** a store-candi
 - Store at least two encrypted backups and record the certificate SHA-256 fingerprint.
 - Configure the four GitHub repository secrets described in `docs/08-android-release-signing.md`.
 - Run the manual **Android Signed Release** workflow to produce the first store-candidate AAB.
-- Confirm the signing/update-key rules of each target store before first publication.
-
-## Current next increment
-
-Issue `#26` tracks a Persian privacy center and one atomic command for deleting all local medication data, history, and related notifications.
 
 ## Device-only work still required
 
@@ -56,16 +51,14 @@ Issue `#26` tracks a Persian privacy center and one atomic command for deleting 
 
 ## Next engineering increments
 
-1. Merge PR `#25` after the final documentation CI run.
-2. Implement Issue `#26` for privacy controls and atomic local-data deletion.
-3. Run physical-device notification and accessibility verification.
-4. Integrate Adivery behind `AdService` with the safety caps in Issue `#3`.
-5. Prepare the public privacy policy, store listing, and a 10–20 user closed beta.
+1. Complete and merge PR `#27` after strict privacy-control validation.
+2. Run physical-device notification and accessibility verification.
+3. Integrate Adivery behind `AdService` with the safety caps in Issue `#3`.
+4. Finalize the public privacy policy, store metadata, and a 10–20 user closed beta.
 
 ## Repository
 
 - GitHub repository: `Emad211/daro-ta-key-daram`
 - Default branch: `main`
-- Release-signing PR ready for final validation: `#25`
-- Privacy-control issue queued next: `#26`
+- Active privacy-control PR: `#27`
 - Repository and strict CI are the source of truth for subsequent engineering work.
