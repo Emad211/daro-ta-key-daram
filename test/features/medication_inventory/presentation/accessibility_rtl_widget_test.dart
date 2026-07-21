@@ -78,11 +78,11 @@ void main() {
         final Finder stock = find.byKey(const Key('inventory-stock-input'));
         await tester.enterText(stock, '۴۰');
         final Finder review = find.byKey(const Key('review-inventory-event'));
-        await _scrollTo(
-          tester,
-          review,
-          scrollable: find.byKey(const Key('inventory-event-scroll')),
+        final Finder inventoryScroll = find.descendant(
+          of: find.byKey(const Key('inventory-event-scroll')),
+          matching: find.byType(Scrollable),
         );
+        await _scrollTo(tester, review, scrollable: inventoryScroll);
         await tester.tap(review);
         await tester.pumpAndSettle();
         expect(
