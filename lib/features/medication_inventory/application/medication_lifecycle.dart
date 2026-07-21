@@ -75,12 +75,15 @@ abstract final class MedicationLifecyclePolicy {
             operation == MedicationLifecycleOperation.recordInventoryEvent ||
             operation == MedicationLifecycleOperation.archive ||
             operation == MedicationLifecycleOperation.deletePermanently;
+        break;
       case MedicationLifecycleState.archived:
         allowed =
             operation == MedicationLifecycleOperation.restore ||
             operation == MedicationLifecycleOperation.deletePermanently;
+        break;
       case MedicationLifecycleState.missing:
         allowed = false;
+        break;
     }
 
     if (!allowed) {
