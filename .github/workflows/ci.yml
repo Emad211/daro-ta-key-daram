@@ -19,6 +19,13 @@ jobs:
           ref: agent/lifecycle-state-machine
           fetch-depth: 0
 
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
       - name: Add explicit switch termination
         run: |
           python - <<'PY'
