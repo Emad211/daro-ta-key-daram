@@ -80,8 +80,14 @@
 - [x] ساخت و بررسی AAB امضاشده با کلید موقت در CI
 - [x] اعتبارسنجی signing محلی و environment-backed در CI
 - [x] workflow دستی امن برای ساخت AAB با GitHub Secrets
+- [x] ساخت release APK موقت و اعتبارسنجی `apksigner` در CI
+- [x] workflow دستی برای APK نصب‌شدنی و AAB با یک signing identity
+- [x] checksum، build metadata و راهنمای نصب بدون SAI
+- [x] runbook نصب، clean install، upgrade، اعلان، privacy و TalkBack
 - [ ] ساخت upload keystore دائمی و backup رمزگذاری‌شده توسط مالک پروژه
-- [ ] تنظیم چهار GitHub Secret و ساخت نخستین AAB کاندید انتشار
+- [ ] تنظیم چهار GitHub Secret و ساخت نخستین APK/AAB دائمی
+- [ ] نصب clean روی دستگاه فیزیکی با Package Installer
+- [ ] تست upgrade با دو build دارای کلید دائمی و versionCode افزایشی
 - [x] privacy center و حذف اتمیک همه داده‌های محلی — Issue `#26`
 - [x] پیش‌نویس سیاست حریم خصوصی فارسی با placeholderهای انتشار
 - [ ] تکمیل مشخصات ناشر و URL عمومی HTTPS سیاست حریم خصوصی
