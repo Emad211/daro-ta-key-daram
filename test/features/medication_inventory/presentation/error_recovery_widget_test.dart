@@ -442,6 +442,11 @@ final class _ControlledMedicationRepository implements MedicationRepository {
   }
 
   @override
+  Future<void> deleteAll() {
+    return _delegate.deleteAll();
+  }
+
+  @override
   Future<Medication?> findById(String medicationId) {
     return _delegate.findById(medicationId);
   }

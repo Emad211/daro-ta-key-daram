@@ -143,7 +143,7 @@ Future<void> _pumpPrivacyCenter(
 ) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: <Override>[
+      overrides: [
         rawMedicationRepositoryProvider.overrideWithValue(repository),
         localNotificationServiceProvider.overrideWithValue(notifications),
         clockProvider.overrideWithValue(() => now),
