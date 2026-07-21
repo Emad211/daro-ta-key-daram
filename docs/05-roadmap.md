@@ -68,8 +68,9 @@
 
 ## Phase 5 — Quality and release
 
-- [ ] accessibility audit
-- [ ] RTL and large-font tests
+- [x] automated accessibility audit برای مسیرهای بحرانی
+- [x] RTL and large-font tests در مقیاس‌های ۱٫۰، ۱٫۳ و ۲٫۰
+- [ ] TalkBack، display-size و gesture audit روی دستگاه فیزیکی
 - [ ] integration tests روی دستگاه
 - [ ] signing config امن و APK/AAB داخلی
 - [ ] closed beta با ۱۰ تا ۲۰ کاربر
