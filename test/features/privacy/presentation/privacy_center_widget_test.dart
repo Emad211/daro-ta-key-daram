@@ -101,7 +101,7 @@ void main() {
 
       expect(notifications.cancelAllCalls, 2);
       expect(find.byKey(const Key('retry-notification-cleanup')), findsNothing);
-      expect(find.text('اعلان‌های باقی‌مانده پاک شدند.'), findsOneWidget);
+      expect(find.text('اطلاعات دارویی محلی حذف شده‌اند.'), findsOneWidget);
     },
   );
 
