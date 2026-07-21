@@ -8,43 +8,45 @@ import 'package:daro_ta_key_daram/features/notifications/infrastructure/notifica
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('deleteAll clears persisted medication data before notification cleanup', (
-    ) async {
-    final DateTime now = DateTime.utc(2026, 7, 21, 12);
-    final InMemoryMedicationRepository raw = InMemoryMedicationRepository(
-      seed: <Medication>[
-        Medication(
-          id: 'medication-1',
-          name: 'متفورمین',
-          unit: MedicationUnit.tablet,
-          stockAtRecord: 30,
-          unitsPerDay: 2,
-          inventoryRecordedAt: now,
-        ),
-      ],
-      clock: () => now,
-    );
-    late _OrderingNotificationService notifications;
-    notifications = _OrderingNotificationService(
-      onCancelAll: () async {
-        expect(await raw.watchActiveMedications().first, isEmpty);
-        expect(await raw.watchArchivedMedications().first, isEmpty);
-      },
-    );
-    final NotificationAwareMedicationRepository repository =
-        NotificationAwareMedicationRepository(
-          raw,
-          NotificationSyncCoordinator(
-            medicationRepository: raw,
-            notificationService: notifications,
-            clock: () => now,
+  test(
+    'deleteAll clears persisted medication data before notification cleanup',
+    () async {
+      final DateTime now = DateTime.utc(2026, 7, 21, 12);
+      final InMemoryMedicationRepository raw = InMemoryMedicationRepository(
+        seed: <Medication>[
+          Medication(
+            id: 'medication-1',
+            name: 'متفورمین',
+            unit: MedicationUnit.tablet,
+            stockAtRecord: 30,
+            unitsPerDay: 2,
+            inventoryRecordedAt: now,
           ),
-        );
+        ],
+        clock: () => now,
+      );
+      late _OrderingNotificationService notifications;
+      notifications = _OrderingNotificationService(
+        onCancelAll: () async {
+          expect(await raw.watchActiveMedications().first, isEmpty);
+          expect(await raw.watchArchivedMedications().first, isEmpty);
+        },
+      );
+      final NotificationAwareMedicationRepository repository =
+          NotificationAwareMedicationRepository(
+            raw,
+            NotificationSyncCoordinator(
+              medicationRepository: raw,
+              notificationService: notifications,
+              clock: () => now,
+            ),
+          );
 
-    await repository.deleteAll();
+      await repository.deleteAll();
 
-    expect(notifications.cancelAllCalls, 1);
-  });
+      expect(notifications.cancelAllCalls, 1);
+    },
+  );
 }
 
 final class _OrderingNotificationService implements LocalNotificationService {
