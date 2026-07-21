@@ -38,7 +38,7 @@ A CI-signed AAB proves the release build path only. It is deliberately signed by
 
 - Generate the permanent upload keystore once.
 - Store encrypted offline backups and record its certificate fingerprint.
-- Configure the four GitHub repository secrets described in `docs/07-android-release-signing.md`.
+- Configure the four GitHub repository secrets described in `docs/08-android-release-signing.md`.
 - Run the manual **Android Signed Release** workflow to produce the first store-candidate AAB.
 
 ## Device-only work still required
