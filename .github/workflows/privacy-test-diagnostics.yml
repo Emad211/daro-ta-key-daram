@@ -1,0 +1,55 @@
+name: Privacy Test Diagnostics
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  privacy-test-diagnostics:
+    if: github.head_ref == 'agent/privacy-center-data-deletion'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate Drift code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Capture privacy test output
+        shell: bash
+        run: |
+          set +e
+          flutter test \
+            test/features/medication_inventory/application/local_medication_data_deletion_service_test.dart \
+            test/features/medication_inventory/infrastructure/delete_all_medication_data_test.dart \
+            test/features/notifications/infrastructure/notification_aware_delete_all_test.dart \
+            test/features/privacy/presentation/privacy_center_widget_test.dart \
+            test/features/medication_inventory/presentation/accessibility_rtl_widget_test.dart \
+            --reporter expanded 2>&1 | tee privacy-test-output.txt
+          status=${PIPESTATUS[0]}
+          echo "$status" > privacy-test-status.txt
+          exit 0
+
+      - name: Upload privacy test diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-test-diagnostics
+          path: |
+            privacy-test-output.txt
+            privacy-test-status.txt
+          if-no-files-found: error
+          retention-days: 1
