@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:daro_ta_key_daram/core/database/app_database.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/application/medication_details_update.dart';
+import 'package:daro_ta_key_daram/features/medication_inventory/application/medication_lifecycle.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/inventory_event.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication_unit.dart';
@@ -154,7 +155,7 @@ void main() {
         ),
       );
 
-      await expectLater(operation, throwsStateError);
+      await expectLater(operation, throwsA(isA<MedicationNotFoundException>()));
       expect(await database.select(database.inventoryEvents).get(), isEmpty);
     });
   });
