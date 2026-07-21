@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Reliability hardening before physical-device notification verification and release engineering.
+Quality and release hardening before physical-device notification verification and closed beta.
 
 ## Completed on `main`
 
@@ -19,20 +19,17 @@ Reliability hardening before physical-device notification verification and relea
 - [x] Android project with application ID `ir.emadkarimi.darutakey`
 - [x] Strict CI for code generation, schema parity, formatting, analyzer, tests, debug APK build, and artifact upload
 
-## Current engineering increment
-
-PR `#21` implements command error recovery:
+## Validated for merge in PR `#21`
 
 - typed Persian UI failure messages
 - retained form state after rejected commands
-- duplicate-submission guards
+- duplicate-submission guards for every write surface
 - review-before-save for quantity baselines
 - archive undo through the typed restore command
-- tests proving cancelled and rejected flows have no persisted side effects
-- canonical Dart formatting committed from Flutter `3.44.6`
-- bidirectional, viewport-deterministic retained-field widget assertions
-
-The increment is not complete until strict CI and the Android debug build pass.
+- cancelled and rejected commands proven to have no persisted side effects
+- canonical Dart formatting under Flutter `3.44.6`
+- bidirectional, viewport-deterministic widget assertions
+- complete strict CI, test suite, debug APK build, and artifact upload passed in run `#228`
 
 ## Next engineering increments
 
@@ -47,5 +44,5 @@ The increment is not complete until strict CI and the Android debug build pass.
 
 - GitHub repository: `Emad211/daro-ta-key-daram`
 - Default branch: `main`
-- Active integration PR: `#21`
+- Integration PR ready for final validation: `#21`
 - Repository and strict CI are the source of truth for subsequent engineering work.
