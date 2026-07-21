@@ -15,34 +15,37 @@ Quality and release hardening before physical-device notification verification a
 - [x] Hardened stock calculation precision and boundary invariants
 - [x] Typed create, details, quantity, archive, restore, and delete repository commands
 - [x] Explicit active / archived / missing lifecycle state machine
+- [x] Typed Persian command failures, retained form state, duplicate-submit guards, quantity review, schedule confirmation, and archive undo
+- [x] Cancelled and rejected write commands proven to have no persisted aggregate or history side effects
 - [x] Stable notification IDs, permission flow, scheduling, replacement, cancellation, deep links, reboot persistence, and timezone fallback
 - [x] Android project with application ID `ir.emadkarimi.darutakey`
 - [x] Strict CI for code generation, schema parity, formatting, analyzer, tests, debug APK build, and artifact upload
 
-## Validated for merge in PR `#21`
+## Current engineering increment
 
-- typed Persian UI failure messages
-- retained form state after rejected commands
-- duplicate-submission guards for every write surface
-- review-before-save for quantity baselines
-- archive undo through the typed restore command
-- cancelled and rejected commands proven to have no persisted side effects
-- canonical Dart formatting under Flutter `3.44.6`
-- bidirectional, viewport-deterministic widget assertions
-- complete strict CI, test suite, debug APK build, and artifact upload passed in run `#228`
+Issue `#22` and draft PR `#23` establish the accessibility baseline:
+
+- Persian RTL as the canonical regression direction
+- narrow 360 × 640 logical-pixel phone viewport
+- text scales 1.0, 1.3, and 2.0
+- dashboard, add, details, quantity review, edit, and archive traversal
+- Persian semantics for critical icon-only actions
+- tests that fail on uncaught Flutter rendering exceptions
+- adaptive fixes for any measured overflow or unreachable control
+
+The increment remains draft until strict CI, the complete test suite, and the Android debug APK build pass.
 
 ## Next engineering increments
 
 1. Run the physical-device notification checklist in Issue `#10`.
 2. Replace debug signing with a secure release signing workflow and produce an internal AAB.
-3. Perform accessibility, large-font, and RTL overflow audits.
-4. Integrate Adivery behind `AdService` with the safety caps in Issue `#3`.
-5. Add privacy-safe technical analytics containing no medication names, schedules, stock, notes, or health attributes.
-6. Prepare privacy policy, store listing, and a 10–20 user closed beta.
+3. Integrate Adivery behind `AdService` with the safety caps in Issue `#3`.
+4. Add privacy-safe technical analytics containing no medication names, schedules, stock, notes, or health attributes.
+5. Prepare privacy policy, store listing, and a 10–20 user closed beta.
 
 ## Repository
 
 - GitHub repository: `Emad211/daro-ta-key-daram`
 - Default branch: `main`
-- Integration PR ready for final validation: `#21`
+- Active accessibility PR: `#23`
 - Repository and strict CI are the source of truth for subsequent engineering work.
