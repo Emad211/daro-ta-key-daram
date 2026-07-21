@@ -53,9 +53,10 @@ void main() {
       find.text('اطلاعات در این فاصله تغییر کرده است. صفحه را تازه‌سازی کنید.'),
       findsOneWidget,
     );
+    expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+    await _scrollTo(tester, name);
     expect(_fieldText(tester, name), 'متفورمین آزمایشی');
     expect(_fieldText(tester, stock), '۲۴');
-    expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
     expect(await repository.watchActiveMedications().first, isEmpty);
   });
 
@@ -99,9 +100,10 @@ void main() {
       find.text('این دارو دیگر در دسترس نیست. صفحه را تازه‌سازی کنید.'),
       findsOneWidget,
     );
+    expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+    await _scrollTo(tester, name);
     expect(_fieldText(tester, name), 'نام ویرایش‌شده');
     expect((await repository.findById(medication.id))!.name, medication.name);
-    expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
   });
 
   testWidgets(
