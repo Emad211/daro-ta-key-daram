@@ -112,8 +112,7 @@ class _MedicationDetailsScaffoldState
             if (!medication.isArchived) ...<Widget>[
               const SizedBox(height: 14),
               _ActionCard(
-                onRestock: () =>
-                    _showInventoryForm(InventoryEventType.restock),
+                onRestock: () => _showInventoryForm(InventoryEventType.restock),
                 onCorrection: () =>
                     _showInventoryForm(InventoryEventType.correction),
               ),
@@ -154,10 +153,8 @@ class _MedicationDetailsScaffoldState
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (BuildContext context) => InventoryEventFormSheet(
-        medication: widget.medication,
-        type: type,
-      ),
+      builder: (BuildContext context) =>
+          InventoryEventFormSheet(medication: widget.medication, type: type),
     );
 
     if (saved == true && mounted) {

@@ -174,7 +174,6 @@ void main() {
     },
   );
 
-
   testWidgets('failed archive blocks duplicates and keeps medication active', (
     WidgetTester tester,
   ) async {
@@ -183,12 +182,7 @@ void main() {
         _ControlledMedicationRepository(seed: <Medication>[medication]);
     repository.archiveGate = Completer<void>();
 
-    await _pumpAppAt(
-      tester,
-      repository,
-      now,
-      '/medications/${medication.id}',
-    );
+    await _pumpAppAt(tester, repository, now, '/medications/${medication.id}');
 
     final Finder archive = find.byKey(Key('archive-${medication.id}'));
     await tester.tap(archive);
@@ -220,12 +214,7 @@ void main() {
     final InMemoryMedicationRepository repository =
         InMemoryMedicationRepository(seed: <Medication>[medication]);
 
-    await _pumpAppAt(
-      tester,
-      repository,
-      now,
-      '/medications/${medication.id}',
-    );
+    await _pumpAppAt(tester, repository, now, '/medications/${medication.id}');
 
     final Finder archive = find.byKey(Key('archive-${medication.id}'));
     await tester.tap(archive);
@@ -244,45 +233,48 @@ void main() {
     await tester.tap(find.text('برگرداندن'));
     await tester.pumpAndSettle();
     expect((await repository.findById(medication.id))!.isArchived, isFalse);
-    expect(find.text('${medication.name} به فهرست فعال برگشت.'), findsOneWidget);
-  });
-
-  testWidgets('restore blocks duplicate submissions and keeps item on failure', (
-    WidgetTester tester,
-  ) async {
-    final Medication archived = _medication(now).copyWith(isArchived: true);
-    final _ControlledMedicationRepository repository =
-        _ControlledMedicationRepository(seed: <Medication>[archived]);
-    repository.restoreGate = Completer<void>();
-
-    await _pumpAppAt(tester, repository, now, '/archive');
-
-    final Finder restore = find.byKey(Key('restore-${archived.id}'));
-    await tester.tap(restore);
-    await tester.pump();
-    expect(repository.restoreCalls, 1);
-    expect(tester.widget<FilledButton>(restore).onPressed, isNull);
-    await tester.tap(restore);
-    await tester.pump();
-    expect(repository.restoreCalls, 1);
-
-    repository.restoreGate!.completeError(
-      const MedicationLifecycleViolation(
-        medicationId: 'medication-1',
-        state: MedicationLifecycleState.active,
-        operation: MedicationLifecycleOperation.restore,
-      ),
-    );
-    await tester.pumpAndSettle();
-
     expect(
-      find.text('این عملیات در وضعیت فعلی دارو قابل انجام نیست.'),
+      find.text('${medication.name} به فهرست فعال برگشت.'),
       findsOneWidget,
     );
-    expect(await repository.watchArchivedMedications().first, hasLength(1));
-    expect(tester.widget<FilledButton>(restore).onPressed, isNotNull);
   });
 
+  testWidgets(
+    'restore blocks duplicate submissions and keeps item on failure',
+    (WidgetTester tester) async {
+      final Medication archived = _medication(now).copyWith(isArchived: true);
+      final _ControlledMedicationRepository repository =
+          _ControlledMedicationRepository(seed: <Medication>[archived]);
+      repository.restoreGate = Completer<void>();
+
+      await _pumpAppAt(tester, repository, now, '/archive');
+
+      final Finder restore = find.byKey(Key('restore-${archived.id}'));
+      await tester.tap(restore);
+      await tester.pump();
+      expect(repository.restoreCalls, 1);
+      expect(tester.widget<FilledButton>(restore).onPressed, isNull);
+      await tester.tap(restore);
+      await tester.pump();
+      expect(repository.restoreCalls, 1);
+
+      repository.restoreGate!.completeError(
+        const MedicationLifecycleViolation(
+          medicationId: 'medication-1',
+          state: MedicationLifecycleState.active,
+          operation: MedicationLifecycleOperation.restore,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('این عملیات در وضعیت فعلی دارو قابل انجام نیست.'),
+        findsOneWidget,
+      );
+      expect(await repository.watchArchivedMedications().first, hasLength(1));
+      expect(tester.widget<FilledButton>(restore).onPressed, isNotNull);
+    },
+  );
 
   testWidgets('failed permanent deletion preserves aggregate and history', (
     WidgetTester tester,
@@ -320,25 +312,26 @@ void main() {
     expect(tester.widget<IconButton>(delete).onPressed, isNotNull);
   });
 
-  testWidgets('cancelled permanent deletion leaves aggregate and history intact', (
-    WidgetTester tester,
-  ) async {
-    final Medication archived = _medication(now).copyWith(isArchived: true);
-    final InMemoryMedicationRepository repository =
-        InMemoryMedicationRepository(seed: <Medication>[archived]);
+  testWidgets(
+    'cancelled permanent deletion leaves aggregate and history intact',
+    (WidgetTester tester) async {
+      final Medication archived = _medication(now).copyWith(isArchived: true);
+      final InMemoryMedicationRepository repository =
+          InMemoryMedicationRepository(seed: <Medication>[archived]);
 
-    await _pumpAppAt(tester, repository, now, '/archive');
-    await tester.tap(find.byKey(Key('delete-${archived.id}')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(Key('cancel-delete-${archived.id}')));
-    await tester.pumpAndSettle();
+      await _pumpAppAt(tester, repository, now, '/archive');
+      await tester.tap(find.byKey(Key('delete-${archived.id}')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(Key('cancel-delete-${archived.id}')));
+      await tester.pumpAndSettle();
 
-    expect(await repository.findById(archived.id), isNotNull);
-    expect(
-      await repository.watchInventoryEvents(archived.id).first,
-      hasLength(1),
-    );
-  });
+      expect(await repository.findById(archived.id), isNotNull);
+      expect(
+        await repository.watchInventoryEvents(archived.id).first,
+        hasLength(1),
+      );
+    },
+  );
 }
 
 Future<void> _pumpAppAt(

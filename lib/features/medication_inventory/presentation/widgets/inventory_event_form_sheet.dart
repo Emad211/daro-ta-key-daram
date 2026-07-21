@@ -262,10 +262,10 @@ class _InventoryEventFormSheetState
   static String _number(double value) {
     return value == value.roundToDouble()
         ? value.toInt().toString()
-        : value.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '').replaceFirst(
-            RegExp(r'\.$'),
-            '',
-          );
+        : value
+              .toStringAsFixed(2)
+              .replaceFirst(RegExp(r'0+$'), '')
+              .replaceFirst(RegExp(r'\.$'), '');
   }
 }
 

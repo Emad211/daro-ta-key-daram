@@ -1,39 +1,61 @@
-name: Step 6 Formatter Finalizer
+name: Flutter CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  finalize-formatting:
-    if: github.head_ref == 'agent/error-recovery-flows'
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 35
 
     steps:
-      - name: Checkout source branch
+      - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
 
-      - name: Reconstruct and verify formatter payload
-        run: |
-          cat .step6format/chunk-* | base64 --decode > /tmp/step6-format-payload.tar.gz
-          echo '5a5774489b5f31fe121dafeb0a076175e1011a82452a2b157a9967259bdfd809  /tmp/step6-format-payload.tar.gz' | sha256sum --check --strict
+      - name: Verify committed Android platform
+        run: test -f android/app/build.gradle.kts
 
-      - name: Apply canonical formatter output
-        run: |
-          tar -xzf /tmp/step6-format-payload.tar.gz -C .
-          rm -rf .step6format
-          git diff --check
+      - name: Install dependencies
+        run: flutter pub get
 
-      - name: Commit canonical formatting
+      - name: Generate Drift code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Verify Drift schema snapshot
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'style: apply canonical step 6 formatting'
-          git push origin "HEAD:${GITHUB_HEAD_REF}"
+          rm -rf /tmp/daro_drift_schemas
+          bash tool/export_drift_schema.sh /tmp/daro_drift_schemas
+          test -f drift_schemas/drift_schema_v1.json
+          diff -u drift_schemas/drift_schema_v2.json /tmp/daro_drift_schemas/drift_schema_v2.json
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test --coverage
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: daro-ta-key-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
