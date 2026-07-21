@@ -30,6 +30,7 @@ PR `#21` implements command error recovery:
 - archive undo through the typed restore command
 - tests proving cancelled and rejected flows have no persisted side effects
 - canonical Dart formatting committed from Flutter `3.44.6`
+- viewport-deterministic retained-field widget assertions
 
 The increment is not complete until strict CI and the Android debug build pass.
 
