@@ -1,12 +1,14 @@
 --- a/lib/features/medication_inventory/infrastructure/drift_medication_repository.dart
 +++ b/lib/features/medication_inventory/infrastructure/drift_medication_repository.dart
-@@ -5,6 +5,7 @@
+@@ -3,6 +3,7 @@
  
  import '../../../core/database/app_database.dart';
  import '../application/medication_details_update.dart';
 +import '../application/medication_lifecycle.dart';
  import '../application/medication_repository.dart';
-@@ -26,17 +27,33 @@
+ import '../domain/consumption_schedule.dart';
+ import '../domain/consumption_schedule_codec.dart';
+@@ -24,15 +25,29 @@
  
    @override
    Future<void> archive(String medicationId) {
@@ -39,7 +41,8 @@
 +      }
      });
    }
-@@ -78,14 +95,15 @@
+ 
+@@ -76,11 +91,11 @@
                  (Medications table) => table.id.equals(event.medicationId),
                ))
                .getSingleOrNull();
@@ -55,7 +58,8 @@
 +      );
  
        await _insertInventoryEvent(event, effectiveAt: effectiveAt);
-@@ -93,11 +111,19 @@
+       await (_database.update(_database.medications)
+@@ -91,11 +106,19 @@
  
    @override
    Future<void> restore(String medicationId) {
@@ -74,7 +78,9 @@
 +      isArchived: medication.isArchived,
 +    );
      final DateTime now = _nowUtc();
-@@ -159,9 +185,11 @@
+     final DateTime effectiveAt = _normalizeUtc(medication.inventoryRecordedAt);
+     if (effectiveAt.isAfter(now)) {
+@@ -157,9 +180,11 @@
                  (Medications table) => table.id.equals(update.medicationId),
                ))
                .getSingleOrNull();
@@ -88,7 +94,8 @@
 +      );
  
        final InventoryEventRow? latest = await _latestInventoryEvent(
-@@ -392,22 +420,38 @@
+         update.medicationId,
+@@ -391,21 +416,36 @@
  
    DateTime _nowUtc() => _normalizeUtc(_clock());
  
@@ -138,3 +145,159 @@
 +    });
    }
  }
+--- a/lib/features/medication_inventory/presentation/screens/edit_medication_screen.dart
++++ b/lib/features/medication_inventory/presentation/screens/edit_medication_screen.dart
+@@ -28,6 +28,9 @@
+         if (value == null) {
+           return _NotFound(onBack: () => context.go('/'));
+         }
++        if (value.isArchived) {
++          return _ArchivedReadOnly(onBack: () => context.go('/archive'));
++        }
+         return _EditMedicationForm(medication: value);
+       },
+       error: (Object error, StackTrace stackTrace) => Scaffold(
+@@ -328,6 +331,40 @@
+         ),
+       ),
+     );
++  }
++}
++
++class _ArchivedReadOnly extends StatelessWidget {
++  const _ArchivedReadOnly({required this.onBack});
++
++  final VoidCallback onBack;
++
++  @override
++  Widget build(BuildContext context) {
++    return Scaffold(
++      appBar: AppBar(title: const Text('ویرایش مشخصات دارو')),
++      body: Center(
++        child: Padding(
++          padding: const EdgeInsets.all(24),
++          child: Column(
++            mainAxisSize: MainAxisSize.min,
++            children: <Widget>[
++              const Icon(Icons.inventory_2_outlined, size: 64),
++              const SizedBox(height: 16),
++              const Text(
++                'این دارو آرشیو شده است. برای ویرایش یا ثبت موجودی، ابتدا آن را بازیابی کنید.',
++                textAlign: TextAlign.center,
++              ),
++              const SizedBox(height: 16),
++              FilledButton(
++                onPressed: onBack,
++                child: const Text('مدیریت آرشیو'),
++              ),
++            ],
++          ),
++        ),
++      ),
++    );
+   }
+ }
+ 
+--- a/lib/features/medication_inventory/presentation/screens/medication_details_screen.dart
++++ b/lib/features/medication_inventory/presentation/screens/medication_details_screen.dart
+@@ -55,34 +55,44 @@
+     return Scaffold(
+       appBar: AppBar(
+         title: Text(medication.name),
+-        actions: <Widget>[
+-          IconButton(
+-            tooltip: 'ویرایش مشخصات',
+-            onPressed: () => context.goNamed(
+-              'edit-medication',
+-              pathParameters: <String, String>{'medicationId': medication.id},
+-            ),
+-            icon: const Icon(Icons.edit_outlined),
+-          ),
+-          IconButton(
+-            tooltip: 'آرشیو دارو',
+-            onPressed: () => _archive(context, ref),
+-            icon: const Icon(Icons.archive_outlined),
+-          ),
+-        ],
++        actions: medication.isArchived
++            ? const <Widget>[]
++            : <Widget>[
++                IconButton(
++                  tooltip: 'ویرایش مشخصات',
++                  onPressed: () => context.goNamed(
++                    'edit-medication',
++                    pathParameters: <String, String>{
++                      'medicationId': medication.id,
++                    },
++                  ),
++                  icon: const Icon(Icons.edit_outlined),
++                ),
++                IconButton(
++                  tooltip: 'آرشیو دارو',
++                  onPressed: () => _archive(context, ref),
++                  icon: const Icon(Icons.archive_outlined),
++                ),
++              ],
+       ),
+       body: SafeArea(
+         child: ListView(
+           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+           children: <Widget>[
++            if (medication.isArchived) ...<Widget>[
++              const _ArchivedNotice(),
++              const SizedBox(height: 14),
++            ],
+             _StockSummaryCard(medication: medication, snapshot: snapshot),
+-            const SizedBox(height: 14),
+-            _ActionCard(
+-              onRestock: () =>
+-                  _showInventoryForm(context, InventoryEventType.restock),
+-              onCorrection: () =>
+-                  _showInventoryForm(context, InventoryEventType.correction),
+-            ),
++            if (!medication.isArchived) ...<Widget>[
++              const SizedBox(height: 14),
++              _ActionCard(
++                onRestock: () =>
++                    _showInventoryForm(context, InventoryEventType.restock),
++                onCorrection: () =>
++                    _showInventoryForm(context, InventoryEventType.correction),
++              ),
++            ],
+             const SizedBox(height: 14),
+             _MedicationInformationCard(medication: medication),
+             const SizedBox(height: 22),
+@@ -185,6 +195,33 @@
+   }
+ }
+ 
++class _ArchivedNotice extends StatelessWidget {
++  const _ArchivedNotice();
++
++  @override
++  Widget build(BuildContext context) {
++    return Card(
++      child: Padding(
++        padding: const EdgeInsets.all(16),
++        child: Row(
++          children: <Widget>[
++            Icon(
++              Icons.inventory_2_outlined,
++              color: Theme.of(context).colorScheme.primary,
++            ),
++            const SizedBox(width: 12),
++            const Expanded(
++              child: Text(
++                'این دارو آرشیو شده و فقط برای مشاهده در دسترس است. برای تغییر اطلاعات یا موجودی، ابتدا آن را بازیابی کنید.',
++              ),
++            ),
++          ],
++        ),
++      ),
++    );
++  }
++}
++
+ class _StockSummaryCard extends StatelessWidget {
+   const _StockSummaryCard({required this.medication, required this.snapshot});
+ 
