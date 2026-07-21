@@ -31,7 +31,10 @@ Issue `#22` and draft PR `#23` establish the accessibility baseline:
 - dashboard, add, details, quantity review, edit, and archive traversal
 - Persian semantics for critical icon-only actions
 - tests that fail on uncaught Flutter rendering exceptions
-- adaptive fixes for any measured overflow or unreachable control
+- measured dashboard summary metrics changed to vertical content
+- medication urgency state moved outside the constrained title row
+- details write actions changed to a vertically adaptive layout
+- explicit semantic labels added to archive, reminder, edit, archive-command, and permanent-delete icon controls
 
 The increment remains draft until strict CI, the complete test suite, and the Android debug APK build pass.
 
