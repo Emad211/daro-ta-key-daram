@@ -35,6 +35,7 @@ Issue `#22` and draft PR `#23` establish the accessibility baseline:
 - medication urgency state moved outside the constrained title row
 - details write actions changed to a vertically adaptive layout
 - explicit semantic labels added to archive, reminder, edit, archive-command, and permanent-delete icon controls
+- medication-unit and consumption-schedule dropdowns expanded with single-line ellipsis behavior for large system text
 
 The increment remains draft until strict CI, the complete test suite, and the Android debug APK build pass.
 
