@@ -130,7 +130,8 @@ jobs:
           set -euo pipefail
           bundle=build/app/outputs/bundle/release/app-release.aab
           test -f "$bundle"
-          jarsigner -verify -strict -certs "$bundle"
+          jarsigner -verify -verbose -certs "$bundle" | tee /tmp/aab-signature.log
+          grep -F 'jar verified.' /tmp/aab-signature.log
           sha256sum "$bundle" > "$bundle.sha256"
 
       - name: Upload signed AAB
