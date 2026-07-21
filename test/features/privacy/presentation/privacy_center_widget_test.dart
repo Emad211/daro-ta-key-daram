@@ -15,10 +15,11 @@ void main() {
   testWidgets('cancelling the destructive dialog has no side effects', (
     WidgetTester tester,
   ) async {
-    final InMemoryMedicationRepository repository = InMemoryMedicationRepository(
-      seed: <Medication>[_medication('active', now)],
-      clock: () => now,
-    );
+    final InMemoryMedicationRepository repository =
+        InMemoryMedicationRepository(
+          seed: <Medication>[_medication('active', now)],
+          clock: () => now,
+        );
     final _PrivacyNotificationService notifications =
         _PrivacyNotificationService();
     await _pumpPrivacyCenter(tester, repository, notifications, now);
@@ -36,13 +37,14 @@ void main() {
   testWidgets('confirmation deletes active and archived medication data', (
     WidgetTester tester,
   ) async {
-    final InMemoryMedicationRepository repository = InMemoryMedicationRepository(
-      seed: <Medication>[
-        _medication('active', now),
-        _medication('archived', now, isArchived: true),
-      ],
-      clock: () => now,
-    );
+    final InMemoryMedicationRepository repository =
+        InMemoryMedicationRepository(
+          seed: <Medication>[
+            _medication('active', now),
+            _medication('archived', now, isArchived: true),
+          ],
+          clock: () => now,
+        );
     final _PrivacyNotificationService notifications =
         _PrivacyNotificationService();
     await _pumpPrivacyCenter(tester, repository, notifications, now);
@@ -59,35 +61,40 @@ void main() {
     expect(find.text('اطلاعات دارویی محلی حذف شده‌اند.'), findsOneWidget);
   });
 
-  testWidgets('notification cleanup failure is recoverable without data rollback', (
-    WidgetTester tester,
-  ) async {
-    final InMemoryMedicationRepository repository = InMemoryMedicationRepository(
-      seed: <Medication>[_medication('active', now)],
-      clock: () => now,
-    );
-    final _PrivacyNotificationService notifications =
-        _PrivacyNotificationService()..failCancelAll = true;
-    await _pumpPrivacyCenter(tester, repository, notifications, now);
+  testWidgets(
+    'notification cleanup failure is recoverable without data rollback',
+    (WidgetTester tester) async {
+      final InMemoryMedicationRepository repository =
+          InMemoryMedicationRepository(
+            seed: <Medication>[_medication('active', now)],
+            clock: () => now,
+          );
+      final _PrivacyNotificationService notifications =
+          _PrivacyNotificationService()..failCancelAll = true;
+      await _pumpPrivacyCenter(tester, repository, notifications, now);
 
-    await _openDeleteDialog(tester);
-    await tester.tap(
-      find.byKey(const Key('confirm-delete-all-medication-data')),
-    );
-    await tester.pumpAndSettle();
+      await _openDeleteDialog(tester);
+      await tester.tap(
+        find.byKey(const Key('confirm-delete-all-medication-data')),
+      );
+      await tester.pumpAndSettle();
 
-    expect(await repository.watchActiveMedications().first, isEmpty);
-    expect(notifications.cancelAllCalls, 1);
-    expect(find.byKey(const Key('retry-notification-cleanup')), findsOneWidget);
+      expect(await repository.watchActiveMedications().first, isEmpty);
+      expect(notifications.cancelAllCalls, 1);
+      expect(
+        find.byKey(const Key('retry-notification-cleanup')),
+        findsOneWidget,
+      );
 
-    notifications.failCancelAll = false;
-    await tester.tap(find.byKey(const Key('retry-notification-cleanup')));
-    await tester.pumpAndSettle();
+      notifications.failCancelAll = false;
+      await tester.tap(find.byKey(const Key('retry-notification-cleanup')));
+      await tester.pumpAndSettle();
 
-    expect(notifications.cancelAllCalls, 2);
-    expect(find.byKey(const Key('retry-notification-cleanup')), findsNothing);
-    expect(find.text('اعلان‌های باقی‌مانده پاک شدند.'), findsOneWidget);
-  });
+      expect(notifications.cancelAllCalls, 2);
+      expect(find.byKey(const Key('retry-notification-cleanup')), findsNothing);
+      expect(find.text('اعلان‌های باقی‌مانده پاک شدند.'), findsOneWidget);
+    },
+  );
 
   testWidgets('privacy controls remain reachable in RTL at text scale 2.0', (
     WidgetTester tester,
@@ -101,10 +108,11 @@ void main() {
       tester.platformDispatcher.clearTextScaleFactorTestValue();
     });
 
-    final InMemoryMedicationRepository repository = InMemoryMedicationRepository(
-      seed: <Medication>[_medication('active', now)],
-      clock: () => now,
-    );
+    final InMemoryMedicationRepository repository =
+        InMemoryMedicationRepository(
+          seed: <Medication>[_medication('active', now)],
+          clock: () => now,
+        );
     await _pumpPrivacyCenter(
       tester,
       repository,
@@ -166,11 +174,7 @@ Future<void> _openDeleteDialog(WidgetTester tester) async {
   expect(find.text('حذف همه اطلاعات دارویی؟'), findsOneWidget);
 }
 
-Medication _medication(
-  String id,
-  DateTime now, {
-  bool isArchived = false,
-}) {
+Medication _medication(String id, DateTime now, {bool isArchived = false}) {
   return Medication(
     id: id,
     name: 'داروی $id',

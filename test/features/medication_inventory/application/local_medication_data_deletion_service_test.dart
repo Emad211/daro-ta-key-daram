@@ -10,43 +10,48 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final DateTime now = DateTime.utc(2026, 7, 21, 12);
 
-  test('deletes active, archived, and inventory data then clears notifications', (
-    ) async {
-    final InMemoryMedicationRepository repository = InMemoryMedicationRepository(
-      seed: <Medication>[
-        _medication(id: 'active', now: now),
-        _medication(id: 'archived', now: now, isArchived: true),
-      ],
-      clock: () => now,
-    );
-    final _DeletionNotificationService notifications =
-        _DeletionNotificationService();
-    final LocalMedicationDataDeletionService service =
-        LocalMedicationDataDeletionService(
-          repository,
-          NotificationSyncCoordinator(
-            medicationRepository: repository,
-            notificationService: notifications,
+  test(
+    'deletes active, archived, and inventory data then clears notifications',
+    () async {
+      final InMemoryMedicationRepository repository =
+          InMemoryMedicationRepository(
+            seed: <Medication>[
+              _medication(id: 'active', now: now),
+              _medication(id: 'archived', now: now, isArchived: true),
+            ],
             clock: () => now,
-          ),
-        );
+          );
+      final _DeletionNotificationService notifications =
+          _DeletionNotificationService();
+      final LocalMedicationDataDeletionService service =
+          LocalMedicationDataDeletionService(
+            repository,
+            NotificationSyncCoordinator(
+              medicationRepository: repository,
+              notificationService: notifications,
+              clock: () => now,
+            ),
+          );
 
-    final LocalMedicationDataDeletionResult result = await service.deleteAll();
+      final LocalMedicationDataDeletionResult result = await service
+          .deleteAll();
 
-    expect(result.status, LocalMedicationDataDeletionStatus.completed);
-    expect(result.notificationsCleared, isTrue);
-    expect(await repository.watchActiveMedications().first, isEmpty);
-    expect(await repository.watchArchivedMedications().first, isEmpty);
-    expect(await repository.watchInventoryEvents('active').first, isEmpty);
-    expect(await repository.watchInventoryEvents('archived').first, isEmpty);
-    expect(notifications.cancelAllCalls, 1);
-  });
+      expect(result.status, LocalMedicationDataDeletionStatus.completed);
+      expect(result.notificationsCleared, isTrue);
+      expect(await repository.watchActiveMedications().first, isEmpty);
+      expect(await repository.watchArchivedMedications().first, isEmpty);
+      expect(await repository.watchInventoryEvents('active').first, isEmpty);
+      expect(await repository.watchInventoryEvents('archived').first, isEmpty);
+      expect(notifications.cancelAllCalls, 1);
+    },
+  );
 
   test('reports notification cleanup separately and supports retry', () async {
-    final InMemoryMedicationRepository repository = InMemoryMedicationRepository(
-      seed: <Medication>[_medication(id: 'active', now: now)],
-      clock: () => now,
-    );
+    final InMemoryMedicationRepository repository =
+        InMemoryMedicationRepository(
+          seed: <Medication>[_medication(id: 'active', now: now)],
+          clock: () => now,
+        );
     final _DeletionNotificationService notifications =
         _DeletionNotificationService()..failCancelAll = true;
     final LocalMedicationDataDeletionService service =

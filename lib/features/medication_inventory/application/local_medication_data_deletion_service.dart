@@ -1,10 +1,7 @@
 import '../../notifications/application/notification_sync_coordinator.dart';
 import 'medication_repository.dart';
 
-enum LocalMedicationDataDeletionStatus {
-  completed,
-  notificationCleanupPending,
-}
+enum LocalMedicationDataDeletionStatus { completed, notificationCleanupPending }
 
 final class LocalMedicationDataDeletionResult {
   const LocalMedicationDataDeletionResult(this.status);

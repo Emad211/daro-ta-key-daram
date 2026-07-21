@@ -8,60 +8,64 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('deleteAll removes every medication aggregate and cascaded history', (
-    ) async {
-    final DateTime now = DateTime.utc(2026, 7, 21, 12);
-    final AppDatabase database = AppDatabase(NativeDatabase.memory());
-    final DriftMedicationRepository repository = DriftMedicationRepository(
-      database,
-      clock: () => now,
-    );
-
-    try {
-      final Medication active = _medication('active', now);
-      final Medication archived = _medication('archived', now);
-      await repository.create(active);
-      await repository.create(archived);
-      await repository.archive(archived.id);
-      await repository.recordInventoryEvent(
-        InventoryEvent(
-          id: 'restock-active',
-          medicationId: active.id,
-          type: InventoryEventType.restock,
-          stockUnits: 50,
-          effectiveAt: now,
-          createdAt: now,
-        ),
-      );
-      await database.into(database.appPreferences).insert(
-        AppPreferencesCompanion(
-          key: const Value<String>('unrelated.preference'),
-          value: const Value<String>('keep'),
-          updatedAt: Value<DateTime>(now),
-        ),
+  test(
+    'deleteAll removes every medication aggregate and cascaded history',
+    () async {
+      final DateTime now = DateTime.utc(2026, 7, 21, 12);
+      final AppDatabase database = AppDatabase(NativeDatabase.memory());
+      final DriftMedicationRepository repository = DriftMedicationRepository(
+        database,
+        clock: () => now,
       );
 
-      expect(await database.select(database.medications).get(), hasLength(2));
-      expect(
-        await database.select(database.inventoryEvents).get(),
-        hasLength(3),
-      );
+      try {
+        final Medication active = _medication('active', now);
+        final Medication archived = _medication('archived', now);
+        await repository.create(active);
+        await repository.create(archived);
+        await repository.archive(archived.id);
+        await repository.recordInventoryEvent(
+          InventoryEvent(
+            id: 'restock-active',
+            medicationId: active.id,
+            type: InventoryEventType.restock,
+            stockUnits: 50,
+            effectiveAt: now,
+            createdAt: now,
+          ),
+        );
+        await database
+            .into(database.appPreferences)
+            .insert(
+              AppPreferencesCompanion(
+                key: const Value<String>('unrelated.preference'),
+                value: const Value<String>('keep'),
+                updatedAt: Value<DateTime>(now),
+              ),
+            );
 
-      await repository.deleteAll();
+        expect(await database.select(database.medications).get(), hasLength(2));
+        expect(
+          await database.select(database.inventoryEvents).get(),
+          hasLength(3),
+        );
 
-      expect(await database.select(database.medications).get(), isEmpty);
-      expect(await database.select(database.inventoryEvents).get(), isEmpty);
-      expect(await repository.watchActiveMedications().first, isEmpty);
-      expect(await repository.watchArchivedMedications().first, isEmpty);
-      expect(
-        await database.select(database.appPreferences).get(),
-        hasLength(1),
-        reason: 'The command is scoped to medication-domain data.',
-      );
-    } finally {
-      await database.close();
-    }
-  });
+        await repository.deleteAll();
+
+        expect(await database.select(database.medications).get(), isEmpty);
+        expect(await database.select(database.inventoryEvents).get(), isEmpty);
+        expect(await repository.watchActiveMedications().first, isEmpty);
+        expect(await repository.watchArchivedMedications().first, isEmpty);
+        expect(
+          await database.select(database.appPreferences).get(),
+          hasLength(1),
+          reason: 'The command is scoped to medication-domain data.',
+        );
+      } finally {
+        await database.close();
+      }
+    },
+  );
 }
 
 Medication _medication(String id, DateTime now) {
