@@ -28,6 +28,9 @@ class EditMedicationScreen extends ConsumerWidget {
         if (value == null) {
           return _NotFound(onBack: () => context.go('/'));
         }
+        if (value.isArchived) {
+          return _ArchivedReadOnly(onBack: () => context.go('/archive'));
+        }
         return _EditMedicationForm(medication: value);
       },
       error: (Object error, StackTrace stackTrace) => Scaffold(
@@ -325,6 +328,40 @@ class _SafetyNotice extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ArchivedReadOnly extends StatelessWidget {
+  const _ArchivedReadOnly({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('ویرایش مشخصات دارو')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Icon(Icons.inventory_2_outlined, size: 64),
+              const SizedBox(height: 16),
+              const Text(
+                'این دارو آرشیو شده است. برای ویرایش یا ثبت موجودی، ابتدا آن را بازیابی کنید.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: onBack,
+                child: const Text('مدیریت آرشیو'),
+              ),
+            ],
+          ),
         ),
       ),
     );

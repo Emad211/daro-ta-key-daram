@@ -1,4 +1,5 @@
 import 'package:daro_ta_key_daram/features/medication_inventory/application/medication_details_update.dart';
+import 'package:daro_ta_key_daram/features/medication_inventory/application/medication_lifecycle.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/inventory_event.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication_unit.dart';
@@ -60,9 +61,76 @@ void main() {
 
     await repository.archive(medication.id);
     expect(notifications.cancelled, hasLength(1));
+
+    await repository.restore(medication.id);
+    expect(notifications.scheduled, hasLength(4));
+
+    await repository.deletePermanently(medication.id);
+    expect(notifications.cancelled, hasLength(2));
   });
 
-  test('does not synchronize when persistence fails', () async {
+  test('does not synchronize after rejected lifecycle commands', () async {
+    final InMemoryMedicationRepository raw = InMemoryMedicationRepository();
+    final _RecordingNotificationService notifications =
+        _RecordingNotificationService();
+    final NotificationAwareMedicationRepository repository =
+        NotificationAwareMedicationRepository(
+          raw,
+          NotificationSyncCoordinator(
+            medicationRepository: raw,
+            notificationService: notifications,
+            clock: () => now,
+          ),
+        );
+    final Medication medication = Medication(
+      id: 'medication-1',
+      name: 'Test',
+      unit: MedicationUnit.tablet,
+      stockAtRecord: 30,
+      unitsPerDay: 2,
+      inventoryRecordedAt: now,
+    );
+
+    await repository.create(medication);
+    await repository.archive(medication.id);
+    final int scheduledBefore = notifications.scheduled.length;
+    final int cancelledBefore = notifications.cancelled.length;
+
+    await expectLater(
+      repository.updateDetails(
+        MedicationDetailsUpdate(
+          medicationId: medication.id,
+          name: 'Rejected',
+          unit: medication.unit,
+          consumptionSchedule: medication.consumptionSchedule,
+          alertLeadDays: 5,
+        ),
+      ),
+      throwsA(isA<MedicationLifecycleViolation>()),
+    );
+    await expectLater(
+      repository.archive(medication.id),
+      throwsA(isA<MedicationLifecycleViolation>()),
+    );
+    await expectLater(
+      repository.recordInventoryEvent(
+        InventoryEvent(
+          id: 'rejected',
+          medicationId: medication.id,
+          type: InventoryEventType.correction,
+          stockUnits: 3,
+          effectiveAt: now,
+          createdAt: now,
+        ),
+      ),
+      throwsA(isA<MedicationLifecycleViolation>()),
+    );
+
+    expect(notifications.scheduled, hasLength(scheduledBefore));
+    expect(notifications.cancelled, hasLength(cancelledBefore));
+  });
+
+  test('does not synchronize when the aggregate is missing', () async {
     final InMemoryMedicationRepository raw = InMemoryMedicationRepository();
     final _RecordingNotificationService notifications =
         _RecordingNotificationService();
@@ -87,7 +155,7 @@ void main() {
       ),
     );
 
-    await expectLater(operation, throwsStateError);
+    await expectLater(operation, throwsA(isA<MedicationNotFoundException>()));
     expect(notifications.scheduled, isEmpty);
     expect(notifications.cancelled, isEmpty);
   });

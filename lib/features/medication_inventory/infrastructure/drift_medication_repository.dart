@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../application/medication_details_update.dart';
+import '../application/medication_lifecycle.dart';
 import '../application/medication_repository.dart';
 import '../domain/consumption_schedule.dart';
 import '../domain/consumption_schedule_codec.dart';
@@ -24,15 +25,28 @@ final class DriftMedicationRepository implements MedicationRepository {
 
   @override
   Future<void> archive(String medicationId) {
-    return _setArchiveState(medicationId: medicationId, isArchived: true);
+    return _setArchiveState(
+      medicationId: medicationId,
+      targetIsArchived: true,
+      operation: MedicationLifecycleOperation.archive,
+    );
   }
 
   @override
   Future<void> deletePermanently(String medicationId) async {
     await _database.transaction(() async {
-      await (_database.delete(
+      final MedicationRow? existing = await _findMedicationRow(medicationId);
+      MedicationLifecyclePolicy.ensureAllowed(
+        medicationId: medicationId,
+        isArchived: existing?.isArchived,
+        operation: MedicationLifecycleOperation.deletePermanently,
+      );
+      final int affected = await (_database.delete(
         _database.medications,
       )..where((Medications table) => table.id.equals(medicationId))).go();
+      if (affected != 1) {
+        throw StateError('Permanent deletion did not affect one aggregate.');
+      }
     });
   }
 
@@ -76,11 +90,11 @@ final class DriftMedicationRepository implements MedicationRepository {
                 (Medications table) => table.id.equals(event.medicationId),
               ))
               .getSingleOrNull();
-      if (medication == null) {
-        throw StateError(
-          'Cannot create inventory event for a missing medication.',
-        );
-      }
+      MedicationLifecyclePolicy.ensureAllowed(
+        medicationId: event.medicationId,
+        isArchived: medication?.isArchived,
+        operation: MedicationLifecycleOperation.recordInventoryEvent,
+      );
 
       await _insertInventoryEvent(event, effectiveAt: effectiveAt);
       await (_database.update(_database.medications)
@@ -91,11 +105,19 @@ final class DriftMedicationRepository implements MedicationRepository {
 
   @override
   Future<void> restore(String medicationId) {
-    return _setArchiveState(medicationId: medicationId, isArchived: false);
+    return _setArchiveState(
+      medicationId: medicationId,
+      targetIsArchived: false,
+      operation: MedicationLifecycleOperation.restore,
+    );
   }
 
   @override
   Future<void> create(Medication medication) async {
+    MedicationLifecyclePolicy.ensureCreatable(
+      medicationId: medication.id,
+      isArchived: medication.isArchived,
+    );
     final DateTime now = _nowUtc();
     final DateTime effectiveAt = _normalizeUtc(medication.inventoryRecordedAt);
     if (effectiveAt.isAfter(now)) {
@@ -157,9 +179,11 @@ final class DriftMedicationRepository implements MedicationRepository {
                 (Medications table) => table.id.equals(update.medicationId),
               ))
               .getSingleOrNull();
-      if (existing == null) {
-        throw StateError('The requested aggregate does not exist.');
-      }
+      MedicationLifecyclePolicy.ensureAllowed(
+        medicationId: update.medicationId,
+        isArchived: existing?.isArchived,
+        operation: MedicationLifecycleOperation.updateDetails,
+      );
 
       final InventoryEventRow? latest = await _latestInventoryEvent(
         update.medicationId,
@@ -168,7 +192,7 @@ final class DriftMedicationRepository implements MedicationRepository {
         throw StateError('The aggregate has no baseline event.');
       }
 
-      final Medication previous = _toMedicationDomain(existing, latest);
+      final Medication previous = _toMedicationDomain(existing!, latest);
       final bool scheduleChanged =
           previous.consumptionSchedule != update.consumptionSchedule;
       final Medication updated = update.applyTo(previous);
@@ -391,21 +415,36 @@ final class DriftMedicationRepository implements MedicationRepository {
 
   DateTime _nowUtc() => _normalizeUtc(_clock());
 
+  Future<MedicationRow?> _findMedicationRow(String medicationId) {
+    return (_database.select(_database.medications)
+          ..where((Medications table) => table.id.equals(medicationId)))
+        .getSingleOrNull();
+  }
+
   Future<void> _setArchiveState({
     required String medicationId,
-    required bool isArchived,
+    required bool targetIsArchived,
+    required MedicationLifecycleOperation operation,
   }) async {
-    final int affected =
-        await (_database.update(
-          _database.medications,
-        )..where((Medications table) => table.id.equals(medicationId))).write(
-          MedicationsCompanion(
-            isArchived: Value<bool>(isArchived),
-            updatedAt: Value<DateTime>(_nowUtc()),
-          ),
-        );
-    if (affected == 0) {
-      throw StateError('Medication $medicationId does not exist.');
-    }
+    await _database.transaction(() async {
+      final MedicationRow? existing = await _findMedicationRow(medicationId);
+      MedicationLifecyclePolicy.ensureAllowed(
+        medicationId: medicationId,
+        isArchived: existing?.isArchived,
+        operation: operation,
+      );
+      final int affected =
+          await (_database.update(
+            _database.medications,
+          )..where((Medications table) => table.id.equals(medicationId))).write(
+            MedicationsCompanion(
+              isArchived: Value<bool>(targetIsArchived),
+              updatedAt: Value<DateTime>(_nowUtc()),
+            ),
+          );
+      if (affected != 1) {
+        throw StateError('Lifecycle transition did not affect one aggregate.');
+      }
+    });
   }
 }

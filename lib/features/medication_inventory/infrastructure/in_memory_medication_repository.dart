@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../application/medication_details_update.dart';
+import '../application/medication_lifecycle.dart';
 import '../application/medication_repository.dart';
 import '../domain/consumption_schedule.dart';
 import '../domain/inventory_event.dart';
@@ -66,14 +67,21 @@ class InMemoryMedicationRepository implements MedicationRepository {
 
   @override
   Future<void> archive(String medicationId) async {
-    _setArchived(medicationId: medicationId, isArchived: true);
+    final int index = _requireAllowedIndex(
+      medicationId,
+      MedicationLifecycleOperation.archive,
+    );
+    _items[index] = _items[index].copyWith(isArchived: true);
+    _emit();
   }
 
   @override
   Future<void> deletePermanently(String medicationId) async {
-    _items.removeWhere(
-      (Medication medication) => medication.id == medicationId,
+    final int index = _requireAllowedIndex(
+      medicationId,
+      MedicationLifecycleOperation.deletePermanently,
     );
+    _items.removeAt(index);
     _eventsByMedicationId.remove(medicationId);
     _emit();
     _inventoryChanges.add(medicationId);
@@ -91,14 +99,10 @@ class InMemoryMedicationRepository implements MedicationRepository {
 
   @override
   Future<void> recordInventoryEvent(InventoryEvent event) async {
-    final int index = _items.indexWhere(
-      (Medication medication) => medication.id == event.medicationId,
+    final int index = _requireAllowedIndex(
+      event.medicationId,
+      MedicationLifecycleOperation.recordInventoryEvent,
     );
-    if (index == -1) {
-      throw StateError(
-        'Cannot create inventory event for a missing medication.',
-      );
-    }
 
     final List<InventoryEvent> events = _eventsByMedicationId.putIfAbsent(
       event.medicationId,
@@ -117,11 +121,20 @@ class InMemoryMedicationRepository implements MedicationRepository {
 
   @override
   Future<void> restore(String medicationId) async {
-    _setArchived(medicationId: medicationId, isArchived: false);
+    final int index = _requireAllowedIndex(
+      medicationId,
+      MedicationLifecycleOperation.restore,
+    );
+    _items[index] = _items[index].copyWith(isArchived: false);
+    _emit();
   }
 
   @override
   Future<void> create(Medication medication) async {
+    MedicationLifecyclePolicy.ensureCreatable(
+      medicationId: medication.id,
+      isArchived: medication.isArchived,
+    );
     final bool exists = _items.any(
       (Medication item) => item.id == medication.id,
     );
@@ -139,12 +152,10 @@ class InMemoryMedicationRepository implements MedicationRepository {
 
   @override
   Future<void> updateDetails(MedicationDetailsUpdate update) async {
-    final int index = _items.indexWhere(
-      (Medication item) => item.id == update.medicationId,
+    final int index = _requireAllowedIndex(
+      update.medicationId,
+      MedicationLifecycleOperation.updateDetails,
     );
-    if (index == -1) {
-      throw StateError('The requested aggregate does not exist.');
-    }
 
     final Medication previous = _items[index];
     final bool scheduleChanged =
@@ -204,6 +215,21 @@ class InMemoryMedicationRepository implements MedicationRepository {
     }
   }
 
+  int _requireAllowedIndex(
+    String medicationId,
+    MedicationLifecycleOperation operation,
+  ) {
+    final int index = _items.indexWhere(
+      (Medication medication) => medication.id == medicationId,
+    );
+    MedicationLifecyclePolicy.ensureAllowed(
+      medicationId: medicationId,
+      isArchived: index == -1 ? null : _items[index].isArchived,
+      operation: operation,
+    );
+    return index;
+  }
+
   void _emit() {
     _changes.add(_activeSnapshot);
   }
@@ -220,17 +246,6 @@ class InMemoryMedicationRepository implements MedicationRepository {
     return List<InventoryEvent>.unmodifiable(
       _eventsByMedicationId[medicationId] ?? const <InventoryEvent>[],
     );
-  }
-
-  void _setArchived({required String medicationId, required bool isArchived}) {
-    final int index = _items.indexWhere(
-      (Medication medication) => medication.id == medicationId,
-    );
-    if (index == -1) {
-      throw StateError('Medication $medicationId does not exist.');
-    }
-    _items[index] = _items[index].copyWith(isArchived: isArchived);
-    _emit();
   }
 
   static InventoryEvent _initialEventFor(Medication medication) {
