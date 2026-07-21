@@ -72,7 +72,10 @@
 - [x] RTL and large-font tests در مقیاس‌های ۱٫۰، ۱٫۳ و ۲٫۰
 - [ ] TalkBack، display-size و gesture audit روی دستگاه فیزیکی
 - [ ] integration tests روی دستگاه
-- [ ] signing config امن و APK/AAB داخلی
+- [ ] حذف debug signing از release و fail-fast بدون کلید معتبر
+- [ ] ساخت و بررسی AAB امضاشده با کلید موقت در CI
+- [ ] ساخت upload keystore دائمی و backup رمزگذاری‌شده توسط مالک پروژه
+- [ ] تنظیم GitHub Secrets و ساخت AAB امضاشدهٔ داخلی
 - [ ] closed beta با ۱۰ تا ۲۰ کاربر
 - [ ] privacy policy و store listing
 - [ ] انتشار در کافه‌بازار و مایکت
