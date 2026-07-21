@@ -180,11 +180,7 @@ Matcher _notFound(MedicationLifecycleOperation operation) {
   );
 }
 
-Medication _aggregate(
-  String id,
-  DateTime now, {
-  bool isArchived = false,
-}) {
+Medication _aggregate(String id, DateTime now, {bool isArchived = false}) {
   return Medication(
     id: id,
     name: 'Aggregate',

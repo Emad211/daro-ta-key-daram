@@ -40,12 +40,7 @@ void main() {
   testWidgets('direct archived edit route has no save command', (
     WidgetTester tester,
   ) async {
-    await _pumpAt(
-      tester,
-      archived,
-      now,
-      '/medications/${archived.id}/edit',
-    );
+    await _pumpAt(tester, archived, now, '/medications/${archived.id}/edit');
 
     expect(find.byKey(const Key('save-medication-metadata')), findsNothing);
     expect(find.byIcon(Icons.inventory_2_outlined), findsOneWidget);
@@ -58,8 +53,9 @@ Future<void> _pumpAt(
   DateTime now,
   String route,
 ) async {
-  final InMemoryMedicationRepository repository =
-      InMemoryMedicationRepository(seed: <Medication>[archived]);
+  final InMemoryMedicationRepository repository = InMemoryMedicationRepository(
+    seed: <Medication>[archived],
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
