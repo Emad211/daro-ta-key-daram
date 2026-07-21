@@ -1,6 +1,6 @@
 # ADR-0009 — Accessibility, large text, and RTL baseline
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-21
 
 ## Context
@@ -16,7 +16,7 @@ Flutter widget tests can reliably catch many regressions before physical-device 
 - Fail tests on any uncaught Flutter rendering or semantics exception.
 - Keep primary write actions reachable by scrolling rather than shrinking text below the theme baseline.
 - Replace rigid horizontal action layouts with adaptive layouts when large text cannot fit.
-- Give every interactive icon-only control a meaningful Persian tooltip/semantic label.
+- Give every interactive icon-only control a meaningful Persian tooltip and explicit semantic label.
 - Keep state and urgency labels textual; color and icons are supplementary only.
 - Keep product-controlled interactive targets at least 48 logical pixels in both dimensions.
 
@@ -30,7 +30,7 @@ The accessibility smoke suite traverses:
 - edit-medication form
 - archived-medication restore and permanent-delete actions
 
-The suite uses a 360 × 640 logical-pixel viewport and validates scales 1.0, 1.3, and 2.0.
+The suite uses a 360 × 640 logical-pixel viewport and validates scales 1.0, 1.3, and 2.0. Strict Flutter CI run `#283` passed schema parity, canonical formatting, analyzer, the complete test suite, the Android debug APK build, and artifact upload.
 
 ## Device-only follow-up
 
@@ -44,4 +44,4 @@ The following remain outside widget-test scope:
 
 ## Consequences
 
-Accessibility regressions become release-blocking through the existing strict CI pipeline. Some cards and action groups may grow vertically at large text scales; preserving meaning and operability takes priority over fixed visual height.
+Accessibility regressions are release-blocking through the existing strict CI pipeline. Some cards and action groups grow vertically at large text scales; preserving meaning and operability takes priority over fixed visual height. Device-only checks remain mandatory before closed beta and are not implied by passing widget tests.
