@@ -46,8 +46,28 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
-      - name: Test
-        run: flutter test --coverage
+      - name: Run tests
+        id: suite
+        continue-on-error: true
+        run: |
+          set +e
+          flutter test --coverage --reporter expanded > suite-output.txt 2>&1
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit $code
+
+      - name: Upload test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: suite-output
+          path: suite-output.txt
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Enforce tests
+        if: steps.suite.outputs.exit_code != '0'
+        run: exit 1
 
       - name: Build debug APK
         run: flutter build apk --debug
