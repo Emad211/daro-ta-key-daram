@@ -32,15 +32,31 @@ class MedicationListScreen extends ConsumerWidget {
           ],
         ),
         actions: <Widget>[
-          IconButton(
-            tooltip: 'مدیریت آرشیو',
-            onPressed: () => context.goNamed('archived-medications'),
-            icon: const Icon(Icons.archive_outlined),
+          Semantics(
+            container: true,
+            label: 'مدیریت آرشیو',
+            button: true,
+            enabled: true,
+            onTap: () => context.goNamed('archived-medications'),
+            excludeSemantics: true,
+            child: IconButton(
+              tooltip: 'مدیریت آرشیو',
+              onPressed: () => context.goNamed('archived-medications'),
+              icon: const Icon(Icons.archive_outlined),
+            ),
           ),
-          IconButton(
-            tooltip: 'فعال‌کردن یادآوری موجودی',
-            onPressed: () => _requestNotificationPermission(context, ref),
-            icon: const Icon(Icons.notifications_active_outlined),
+          Semantics(
+            container: true,
+            label: 'فعال‌کردن یادآوری موجودی',
+            button: true,
+            enabled: true,
+            onTap: () => _requestNotificationPermission(context, ref),
+            excludeSemantics: true,
+            child: IconButton(
+              tooltip: 'فعال‌کردن یادآوری موجودی',
+              onPressed: () => _requestNotificationPermission(context, ref),
+              icon: const Icon(Icons.notifications_active_outlined),
+            ),
           ),
         ],
       ),
@@ -224,27 +240,24 @@ class _SummaryMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Icon(icon, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              value,
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+        const SizedBox(height: 6),
+        Text(
+          value,
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
