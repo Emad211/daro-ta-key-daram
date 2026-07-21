@@ -1,7 +1,31 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+val releaseSigningConfigured = keystorePropertiesFile.isFile
+
+if (releaseSigningConfigured) {
+    FileInputStream(keystorePropertiesFile).use(keystoreProperties::load)
+}
+
+fun requiredSigningProperty(name: String): String =
+    keystoreProperties.getProperty(name)?.trim()?.takeIf(String::isNotEmpty)
+        ?: throw GradleException(
+            "Missing '$name' in ${keystorePropertiesFile.absolutePath}.",
+        )
+
+val releaseKeystoreFile =
+    if (releaseSigningConfigured) {
+        rootProject.file(requiredSigningProperty("storeFile"))
+    } else {
+        null
+    }
 
 android {
     namespace = "ir.emadkarimi.darutakey"
@@ -23,11 +47,50 @@ android {
         multiDexEnabled = true
     }
 
-    buildTypes {
-        release {
-            signingConfig = signingConfigs.getByName("debug")
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("release") {
+                keyAlias = requiredSigningProperty("keyAlias")
+                keyPassword = requiredSigningProperty("keyPassword")
+                storeFile = releaseKeystoreFile
+                storePassword = requiredSigningProperty("storePassword")
+            }
         }
     }
+
+    buildTypes {
+        release {
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+    }
+}
+
+val verifyReleaseSigning by tasks.registering {
+    group = "verification"
+    description = "Verifies that Android release signing material is present and valid."
+
+    doLast {
+        if (!releaseSigningConfigured) {
+            throw GradleException(
+                "Release signing is not configured. Copy android/key.properties.example " +
+                    "to android/key.properties and provide an ignored upload keystore.",
+            )
+        }
+
+        if (releaseKeystoreFile?.isFile != true) {
+            throw GradleException(
+                "Release keystore was not found at ${releaseKeystoreFile?.absolutePath}.",
+            )
+        }
+    }
+}
+
+tasks.matching { task ->
+    task.name == "assembleRelease" || task.name == "bundleRelease"
+}.configureEach {
+    dependsOn(verifyReleaseSigning)
 }
 
 kotlin {
