@@ -76,7 +76,6 @@ jobs:
           ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
           ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
           ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
-          ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           printf '%s' "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
@@ -86,14 +85,6 @@ jobs:
             -keystore android/upload-keystore.jks \
             -storepass "$ANDROID_UPLOAD_STORE_PASSWORD" \
             -alias "$ANDROID_UPLOAD_KEY_ALIAS" > /dev/null
-
-          cat > android/key.properties <<EOF
-          storePassword=$ANDROID_UPLOAD_STORE_PASSWORD
-          keyPassword=$ANDROID_UPLOAD_KEY_PASSWORD
-          keyAlias=$ANDROID_UPLOAD_KEY_ALIAS
-          storeFile=upload-keystore.jks
-          EOF
-          chmod 600 android/key.properties
 
       - name: Install dependencies
         run: flutter pub get
@@ -108,11 +99,20 @@ jobs:
           flutter test
 
       - name: Verify release signing configuration
+        env:
+          ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+          ANDROID_UPLOAD_STORE_FILE: upload-keystore.jks
         run: cd android && ./gradlew :app:verifyReleaseSigning
 
       - name: Build signed release AAB
         shell: bash
         env:
+          ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+          ANDROID_UPLOAD_STORE_FILE: upload-keystore.jks
           RELEASE_BUILD_NAME: ${{ inputs.build_name }}
           RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
