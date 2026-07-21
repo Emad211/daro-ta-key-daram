@@ -41,20 +41,30 @@ Relative `storeFile` paths are resolved from `android/`. Both `android/key.prope
 
 ## 3. Validate and build locally
 
+Use the repository command so source checks, Gradle signing verification, AAB creation, signature verification, and checksum generation remain consistent:
+
 ```bash
-flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-(cd android && ./gradlew :app:verifyReleaseSigning)
-flutter build appbundle --release
-jarsigner -verify -strict -certs build/app/outputs/bundle/release/app-release.aab
-sha256sum build/app/outputs/bundle/release/app-release.aab
+bash tool/build_signed_android_release.sh
 ```
 
-The bundle is created at:
+Optional version overrides:
+
+```bash
+bash tool/build_signed_android_release.sh \
+  --build-name 0.1.0 \
+  --build-number 1
+```
+
+The script never accepts passwords as arguments. It reads the ignored signing configuration through Gradle.
+
+The bundle and checksum are created at:
 
 ```text
 build/app/outputs/bundle/release/app-release.aab
+build/app/outputs/bundle/release/app-release.aab.sha256
 ```
+
+Android signing certificates are normally self-signed. Verification therefore requires a cryptographically valid JAR signature and the `jar verified.` result; it does not require a public certificate-authority trust chain.
 
 Increase the `version` in `pubspec.yaml` before every store update. The value after `+` becomes the Android version code and must increase for each uploaded release.
 
@@ -104,7 +114,7 @@ Add these repository secrets:
 | `ANDROID_UPLOAD_KEY_ALIAS` | Usually `upload` |
 | `ANDROID_UPLOAD_KEY_PASSWORD` | Private-key password |
 
-Do not paste these values into workflow inputs. Inputs are only for optional version overrides.
+Do not paste these values into workflow inputs. Inputs are only for optional version overrides. Secret values are exposed only to the workflow steps that validate or use signing material; setup actions do not receive them.
 
 ## 6. Run the signed release workflow
 
@@ -118,7 +128,7 @@ Optional inputs:
 The workflow:
 
 1. validates all four secrets and optional version inputs;
-2. reconstructs the keystore only inside the isolated runner;
+2. reconstructs and inspects the keystore only inside the isolated runner;
 3. runs formatting, analyzer, and tests;
 4. verifies the Gradle signing contract;
 5. builds a signed release AAB;
