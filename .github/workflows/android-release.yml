@@ -20,12 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
-    env:
-      ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
-      ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
-      ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
-      ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,6 +39,13 @@ jobs:
 
       - name: Validate release inputs and secrets
         shell: bash
+        env:
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+          RELEASE_BUILD_NAME: ${{ inputs.build_name }}
+          RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
           set -euo pipefail
 
@@ -59,25 +60,32 @@ jobs:
             exit 1
           fi
 
-          build_name='${{ inputs.build_name }}'
-          build_number='${{ inputs.build_number }}'
-
-          if [[ -n "$build_name" && ! "$build_name" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+          if [[ -n "$RELEASE_BUILD_NAME" && ! "$RELEASE_BUILD_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
             echo 'build_name must be a semantic version such as 0.1.0.' >&2
             exit 1
           fi
 
-          if [[ -n "$build_number" && ! "$build_number" =~ ^[1-9][0-9]*$ ]]; then
+          if [[ -n "$RELEASE_BUILD_NUMBER" && ! "$RELEASE_BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
             echo 'build_number must be a positive integer.' >&2
             exit 1
           fi
 
-      - name: Restore upload keystore
+      - name: Restore and inspect upload keystore
         shell: bash
+        env:
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           printf '%s' "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
           chmod 600 android/upload-keystore.jks
+
+          keytool -list \
+            -keystore android/upload-keystore.jks \
+            -storepass "$ANDROID_UPLOAD_STORE_PASSWORD" \
+            -alias "$ANDROID_UPLOAD_KEY_ALIAS" > /dev/null
 
           cat > android/key.properties <<EOF
           storePassword=$ANDROID_UPLOAD_STORE_PASSWORD
@@ -104,14 +112,15 @@ jobs:
 
       - name: Build signed release AAB
         shell: bash
+        env:
+          RELEASE_BUILD_NAME: ${{ inputs.build_name }}
+          RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
           set -euo pipefail
           args=(--release)
-          build_name='${{ inputs.build_name }}'
-          build_number='${{ inputs.build_number }}'
 
-          [[ -z "$build_name" ]] || args+=(--build-name "$build_name")
-          [[ -z "$build_number" ]] || args+=(--build-number "$build_number")
+          [[ -z "$RELEASE_BUILD_NAME" ]] || args+=(--build-name "$RELEASE_BUILD_NAME")
+          [[ -z "$RELEASE_BUILD_NUMBER" ]] || args+=(--build-number "$RELEASE_BUILD_NUMBER")
 
           flutter build appbundle "${args[@]}"
 
