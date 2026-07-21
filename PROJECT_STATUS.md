@@ -19,17 +19,27 @@ Release engineering before physical-device verification and closed beta.
 - [x] Cancelled and rejected write commands proven to have no persisted aggregate or history side effects
 - [x] Stable notification IDs, permission flow, scheduling, replacement, cancellation, deep links, reboot persistence, and timezone fallback
 - [x] Android project with application ID `ir.emadkarimi.darutakey`
+- [x] Automated Persian RTL and large-text coverage at scales 1.0, 1.3, and 2.0
 - [x] Strict CI for code generation, schema parity, formatting, analyzer, tests, debug APK build, and artifact upload
 
-## Validated for merge in PR `#23`
+## Current engineering increment — Issue `#24`, draft PR `#25`
 
-- Persian RTL is the canonical regression direction.
-- Dashboard, add, details, quantity review, edit, and archive flows pass on a narrow 360 × 640 viewport.
-- Text scales 1.0, 1.3, and 2.0 pass with realistic swipe interaction.
-- Critical icon-only controls expose explicit Persian semantic labels.
-- Summary metrics, urgency state, action groups, dropdowns, bottom sheets, and dialogs adapt without RenderFlex overflow.
-- The full existing regression suite remains green after the layout changes.
-- Strict Flutter CI run `#283` passed Drift schema parity, formatting, analyzer, all tests, Android debug APK build, and artifact upload.
+- Remove the Android release build's debug-signing fallback.
+- Require ignored `android/key.properties` and an ignored permanent upload keystore.
+- Fail release tasks explicitly when signing material is absent or invalid.
+- Generate a disposable upload key in strict CI and build a signed release AAB.
+- Verify the AAB signature and publish a SHA-256 checksum artifact.
+- Add a manual GitHub Actions workflow backed by repository secrets for a store-candidate AAB.
+- Document local key generation, offline backup, GitHub secret setup, versioning, and incident handling.
+
+A CI-signed AAB proves the release build path only. It is deliberately signed by a disposable key and must not be uploaded to a store.
+
+## Maintainer-owned release material still required
+
+- Generate the permanent upload keystore once.
+- Store encrypted offline backups and record its certificate fingerprint.
+- Configure the four GitHub repository secrets described in `docs/07-android-release-signing.md`.
+- Run the manual **Android Signed Release** workflow to produce the first store-candidate AAB.
 
 ## Device-only work still required
 
@@ -40,7 +50,7 @@ Release engineering before physical-device verification and closed beta.
 
 ## Next engineering increments
 
-1. Replace debug signing with a secure release-signing workflow and produce an internal AAB.
+1. Complete and merge PR `#25` after strict release AAB validation.
 2. Run physical-device notification and accessibility verification.
 3. Integrate Adivery behind `AdService` with the safety caps in Issue `#3`.
 4. Add privacy-safe technical analytics containing no medication names, schedules, stock, notes, or health attributes.
@@ -50,5 +60,5 @@ Release engineering before physical-device verification and closed beta.
 
 - GitHub repository: `Emad211/daro-ta-key-daram`
 - Default branch: `main`
-- Accessibility PR ready for final validation: `#23`
+- Active release-signing PR: `#25`
 - Repository and strict CI are the source of truth for subsequent engineering work.
