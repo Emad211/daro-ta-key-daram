@@ -67,21 +67,21 @@ abstract final class MedicationLifecyclePolicy {
     final MedicationLifecycleState state = isArchived
         ? MedicationLifecycleState.archived
         : MedicationLifecycleState.active;
-    final bool allowed = switch ((state, operation)) {
-      (
-        MedicationLifecycleState.active,
-        MedicationLifecycleOperation.updateDetails ||
-            MedicationLifecycleOperation.recordInventoryEvent ||
-            MedicationLifecycleOperation.archive ||
-            MedicationLifecycleOperation.deletePermanently,
-      ) => true,
-      (
-        MedicationLifecycleState.archived,
-        MedicationLifecycleOperation.restore ||
-            MedicationLifecycleOperation.deletePermanently,
-      ) => true,
-      _ => false,
-    };
+    final bool allowed;
+    switch (state) {
+      case MedicationLifecycleState.active:
+        allowed =
+            operation == MedicationLifecycleOperation.updateDetails ||
+            operation == MedicationLifecycleOperation.recordInventoryEvent ||
+            operation == MedicationLifecycleOperation.archive ||
+            operation == MedicationLifecycleOperation.deletePermanently;
+      case MedicationLifecycleState.archived:
+        allowed =
+            operation == MedicationLifecycleOperation.restore ||
+            operation == MedicationLifecycleOperation.deletePermanently;
+      case MedicationLifecycleState.missing:
+        allowed = false;
+    }
 
     if (!allowed) {
       throw MedicationLifecycleViolation(
