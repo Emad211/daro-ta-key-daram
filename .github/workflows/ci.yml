@@ -11,11 +11,17 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -52,6 +58,62 @@ jobs:
       - name: Build debug APK
         run: flutter build apk --debug
 
+      - name: Verify release refuses missing signing material
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f android/key.properties android/ci-upload-keystore.jks
+
+          set +e
+          (cd android && ./gradlew :app:verifyReleaseSigning) > /tmp/release-signing-guard.log 2>&1
+          status=$?
+          set -e
+
+          cat /tmp/release-signing-guard.log
+          test "$status" -ne 0
+          grep -F 'Release signing is not configured.' /tmp/release-signing-guard.log
+
+      - name: Generate ephemeral CI upload keystore
+        shell: bash
+        run: |
+          set -euo pipefail
+          password="$(openssl rand -hex 24)"
+
+          keytool -genkeypair \
+            -keystore android/ci-upload-keystore.jks \
+            -storetype JKS \
+            -storepass "$password" \
+            -keypass "$password" \
+            -alias ci-upload \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 3650 \
+            -dname 'CN=Daro Ta Key CI, OU=Release Validation, O=CI, C=IR' \
+            -noprompt
+
+          cat > android/key.properties <<EOF
+          storePassword=$password
+          keyPassword=$password
+          keyAlias=ci-upload
+          storeFile=ci-upload-keystore.jks
+          EOF
+          chmod 600 android/key.properties android/ci-upload-keystore.jks
+
+      - name: Verify configured release signing
+        run: cd android && ./gradlew :app:verifyReleaseSigning
+
+      - name: Build ephemeral signed release AAB
+        run: flutter build appbundle --release
+
+      - name: Verify AAB signature and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle=build/app/outputs/bundle/release/app-release.aab
+          test -f "$bundle"
+          jarsigner -verify -strict -certs "$bundle"
+          sha256sum "$bundle" > "$bundle.sha256"
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
@@ -59,3 +121,17 @@ jobs:
           path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 7
+
+      - name: Upload CI release AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: daro-ta-key-ci-release-aab
+          path: |
+            build/app/outputs/bundle/release/app-release.aab
+            build/app/outputs/bundle/release/app-release.aab.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove ephemeral signing material
+        if: always()
+        run: rm -f android/key.properties android/ci-upload-keystore.jks
