@@ -33,7 +33,7 @@ jobs:
       - name: Verify committed Android platform
         run: test -f android/app/build.gradle.kts
 
-      - name: Verify signing material is untracked
+      - name: Verify signing material and scripts
         shell: bash
         run: |
           set -euo pipefail
@@ -48,6 +48,9 @@ jobs:
           test -z "$tracked"
           git check-ignore --no-index android/key.properties android/upload-keystore.jks
           ! grep -F 'signingConfigs.getByName("debug")' android/app/build.gradle.kts
+          bash -n tool/bootstrap.sh
+          bash -n tool/export_drift_schema.sh
+          bash -n tool/build_signed_android_release.sh
 
       - name: Install dependencies
         run: flutter pub get
@@ -94,6 +97,7 @@ jobs:
         run: |
           set -euo pipefail
           password="$(openssl rand -hex 24)"
+          echo "::add-mask::$password"
 
           keytool -genkeypair \
             -keystore android/ci-upload-keystore.jks \
@@ -115,7 +119,24 @@ jobs:
           EOF
           chmod 600 android/key.properties android/ci-upload-keystore.jks
 
-      - name: Verify configured release signing
+          {
+            echo "ANDROID_UPLOAD_STORE_PASSWORD=$password"
+            echo "ANDROID_UPLOAD_KEY_PASSWORD=$password"
+            echo 'ANDROID_UPLOAD_KEY_ALIAS=ci-upload'
+            echo 'ANDROID_UPLOAD_STORE_FILE=ci-upload-keystore.jks'
+          } >> "$GITHUB_ENV"
+
+      - name: Verify local key.properties signing
+        run: cd android && ./gradlew :app:verifyReleaseSigning
+
+      - name: Switch to environment-backed signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f android/key.properties
+          (cd android && ./gradlew --stop)
+
+      - name: Verify environment-backed release signing
         run: cd android && ./gradlew :app:verifyReleaseSigning
 
       - name: Build ephemeral signed release AAB
