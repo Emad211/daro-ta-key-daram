@@ -77,13 +77,11 @@ void main() {
         await tester.pumpAndSettle();
         final Finder stock = find.byKey(const Key('inventory-stock-input'));
         await tester.enterText(stock, '۴۰');
-        final Finder review = find.byKey(const Key('review-inventory-event'));
-        await tester.dragUntilVisible(
-          review,
-          find.byKey(const Key('inventory-event-scroll')),
-          const Offset(0, -300),
-        );
+        FocusManager.instance.primaryFocus?.unfocus();
+        tester.testTextInput.hide();
         await tester.pumpAndSettle();
+        final Finder review = find.byKey(const Key('review-inventory-event'));
+        await _dragSheetUntilVisible(tester, review);
         await tester.tap(review);
         await tester.pumpAndSettle();
         expect(
@@ -145,6 +143,35 @@ Future<void> _scrollTo(
     scrollable: scrollable ?? find.byType(Scrollable).first,
   );
   await tester.pumpAndSettle();
+}
+
+Future<void> _dragSheetUntilVisible(
+  WidgetTester tester,
+  Finder target,
+) async {
+  final double logicalWidth =
+      tester.view.physicalSize.width / tester.view.devicePixelRatio;
+  final double logicalHeight =
+      tester.view.physicalSize.height / tester.view.devicePixelRatio;
+
+  for (int attempt = 0; attempt < 5; attempt += 1) {
+    final Rect targetRect = tester.getRect(target);
+    if (targetRect.top >= 0 && targetRect.bottom <= logicalHeight - 24) {
+      return;
+    }
+    await tester.dragFrom(
+      Offset(logicalWidth / 2, logicalHeight - 96),
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  final Rect finalRect = tester.getRect(target);
+  expect(
+    finalRect.bottom,
+    lessThanOrEqualTo(logicalHeight - 24),
+    reason: 'The inventory review action must be reachable by swiping.',
+  );
 }
 
 void _expectNoFlutterExceptions(WidgetTester tester, String context) {
