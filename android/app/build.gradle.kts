@@ -8,17 +8,32 @@ plugins {
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
-val releaseSigningConfigured = keystorePropertiesFile.isFile
+val signingEnvironmentVariables =
+    mapOf(
+        "storePassword" to "ANDROID_UPLOAD_STORE_PASSWORD",
+        "keyPassword" to "ANDROID_UPLOAD_KEY_PASSWORD",
+        "keyAlias" to "ANDROID_UPLOAD_KEY_ALIAS",
+        "storeFile" to "ANDROID_UPLOAD_STORE_FILE",
+    )
+val environmentSigningConfigured =
+    signingEnvironmentVariables.values.any { name ->
+        !System.getenv(name).isNullOrBlank()
+    }
+val releaseSigningConfigured = keystorePropertiesFile.isFile || environmentSigningConfigured
 
-if (releaseSigningConfigured) {
+if (keystorePropertiesFile.isFile) {
     FileInputStream(keystorePropertiesFile).use(keystoreProperties::load)
 }
 
-fun requiredSigningProperty(name: String): String =
-    keystoreProperties.getProperty(name)?.trim()?.takeIf(String::isNotEmpty)
+fun requiredSigningProperty(name: String): String {
+    val environmentName = signingEnvironmentVariables.getValue(name)
+    return System.getenv(environmentName)?.takeIf(String::isNotEmpty)
+        ?: keystoreProperties.getProperty(name)?.trim()?.takeIf(String::isNotEmpty)
         ?: throw GradleException(
-            "Missing '$name' in ${keystorePropertiesFile.absolutePath}.",
+            "Missing Android release signing value '$name'. Set $environmentName " +
+                "or provide it in ${keystorePropertiesFile.absolutePath}.",
         )
+}
 
 val releaseKeystoreFile =
     if (releaseSigningConfigured) {
@@ -75,7 +90,7 @@ val verifyReleaseSigning by tasks.registering {
         if (!releaseSigningConfigured) {
             throw GradleException(
                 "Release signing is not configured. Copy android/key.properties.example " +
-                    "to android/key.properties and provide an ignored upload keystore.",
+                    "to android/key.properties or provide the ANDROID_UPLOAD_* environment variables.",
             )
         }
 
