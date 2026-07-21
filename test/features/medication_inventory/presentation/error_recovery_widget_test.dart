@@ -54,8 +54,9 @@ void main() {
       findsOneWidget,
     );
     expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
-    await _scrollTo(tester, name);
+    await _scrollTo(tester, name, delta: -240);
     expect(_fieldText(tester, name), 'متفورمین آزمایشی');
+    await _scrollTo(tester, stock);
     expect(_fieldText(tester, stock), '۲۴');
     expect(await repository.watchActiveMedications().first, isEmpty);
   });
@@ -101,7 +102,7 @@ void main() {
       findsOneWidget,
     );
     expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
-    await _scrollTo(tester, name);
+    await _scrollTo(tester, name, delta: -240);
     expect(_fieldText(tester, name), 'نام ویرایش‌شده');
     expect((await repository.findById(medication.id))!.name, medication.name);
   });
@@ -359,10 +360,14 @@ Future<void> _pumpAppAt(
   await tester.pumpAndSettle();
 }
 
-Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
+Future<void> _scrollTo(
+  WidgetTester tester,
+  Finder finder, {
+  double delta = 240,
+}) async {
   await tester.scrollUntilVisible(
     finder,
-    240,
+    delta,
     scrollable: find.byType(Scrollable).first,
   );
   await tester.pumpAndSettle();

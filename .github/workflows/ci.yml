@@ -1,127 +1,61 @@
-name: Step 6 Scroll Direction Finalizer
+name: Flutter CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  finalize-scroll-direction:
-    if: github.head_ref == 'agent/error-recovery-flows'
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 35
 
     steps:
-      - name: Checkout source branch
+      - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
 
-      - name: Make form scrolling bidirectional
+      - name: Verify committed Android platform
+        run: test -f android/app/build.gradle.kts
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate Drift code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Verify Drift schema snapshot
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
+          rm -rf /tmp/daro_drift_schemas
+          bash tool/export_drift_schema.sh /tmp/daro_drift_schemas
+          test -f drift_schemas/drift_schema_v1.json
+          diff -u drift_schemas/drift_schema_v2.json /tmp/daro_drift_schemas/drift_schema_v2.json
 
-          path = Path('test/features/medication_inventory/presentation/error_recovery_widget_test.dart')
-          text = path.read_text()
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed lib test
 
-          text = text.replace(
-              "await _scrollTo(tester, name);\n    expect(_fieldText(tester, name), 'متفورمین آزمایشی');\n    expect(_fieldText(tester, stock), '۲۴');",
-              "await _scrollTo(tester, name, delta: -240);\n    expect(_fieldText(tester, name), 'متفورمین آزمایشی');\n    await _scrollTo(tester, stock);\n    expect(_fieldText(tester, stock), '۲۴');",
-          )
-          text = text.replace(
-              "await _scrollTo(tester, name);\n    expect(_fieldText(tester, name), 'نام ویرایش‌شده');",
-              "await _scrollTo(tester, name, delta: -240);\n    expect(_fieldText(tester, name), 'نام ویرایش‌شده');",
-          )
-          text = text.replace(
-              "Future<void> _scrollTo(WidgetTester tester, Finder finder) async {\n  await tester.scrollUntilVisible(\n    finder,\n    240,",
-              "Future<void> _scrollTo(\n  WidgetTester tester,\n  Finder finder, {\n  double delta = 240,\n}) async {\n  await tester.scrollUntilVisible(\n    finder,\n    delta,",
-          )
+      - name: Analyze
+        run: flutter analyze
 
-          required = [
-              "await _scrollTo(tester, name, delta: -240);",
-              "await _scrollTo(tester, stock);",
-              "double delta = 240,",
-          ]
-          for value in required:
-              if value not in text:
-                  raise SystemExit(f'Missing expected patch output: {value}')
-          path.write_text(text)
-          PY
+      - name: Test
+        run: flutter test --coverage
 
-      - name: Restore strict CI
-        run: |
-          cat > .github/workflows/ci.yml <<'YAML'
-          name: Flutter CI
+      - name: Build debug APK
+        run: flutter build apk --debug
 
-          on:
-            push:
-              branches: [main]
-            pull_request:
-
-          permissions:
-            contents: read
-
-          jobs:
-            validate:
-              runs-on: ubuntu-latest
-              timeout-minutes: 35
-
-              steps:
-                - name: Checkout
-                  uses: actions/checkout@v4
-
-                - name: Set up Flutter
-                  uses: subosito/flutter-action@v2
-                  with:
-                    flutter-version: 3.44.6
-                    channel: stable
-                    cache: true
-
-                - name: Verify committed Android platform
-                  run: test -f android/app/build.gradle.kts
-
-                - name: Install dependencies
-                  run: flutter pub get
-
-                - name: Generate Drift code
-                  run: dart run build_runner build --delete-conflicting-outputs
-
-                - name: Verify Drift schema snapshot
-                  run: |
-                    rm -rf /tmp/daro_drift_schemas
-                    bash tool/export_drift_schema.sh /tmp/daro_drift_schemas
-                    test -f drift_schemas/drift_schema_v1.json
-                    diff -u drift_schemas/drift_schema_v2.json /tmp/daro_drift_schemas/drift_schema_v2.json
-
-                - name: Verify formatting
-                  run: dart format --output=none --set-exit-if-changed lib test
-
-                - name: Analyze
-                  run: flutter analyze
-
-                - name: Test
-                  run: flutter test --coverage
-
-                - name: Build debug APK
-                  run: flutter build apk --debug
-
-                - name: Upload debug APK
-                  uses: actions/upload-artifact@v4
-                  with:
-                    name: daro-ta-key-debug-apk
-                    path: build/app/outputs/flutter-apk/app-debug.apk
-                    if-no-files-found: error
-                    retention-days: 7
-          YAML
-
-      - name: Commit bidirectional scroll fix
-        run: |
-          git diff --check
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'test: make retained-field scrolling bidirectional'
-          git push origin "HEAD:${GITHUB_HEAD_REF}"
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: daro-ta-key-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
