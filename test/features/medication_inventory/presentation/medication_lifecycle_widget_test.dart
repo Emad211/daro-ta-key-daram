@@ -51,7 +51,9 @@ void main() {
 
     expect(find.text('ثبت خرید مجدد'), findsOneWidget);
     await tester.enterText(find.byType(TextFormField).first, '۴۰');
-    await tester.tap(find.widgetWithText(FilledButton, 'ثبت موجودی جدید'));
+    await tester.tap(find.byKey(const Key('review-inventory-event')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-inventory-event')));
     await tester.pumpAndSettle();
 
     expect(find.text('40 قرص'), findsOneWidget);

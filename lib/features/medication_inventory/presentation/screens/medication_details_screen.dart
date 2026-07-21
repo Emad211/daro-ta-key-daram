@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +9,7 @@ import '../../domain/consumption_schedule_formatter.dart';
 import '../../domain/inventory_event.dart';
 import '../../domain/medication.dart';
 import '../../domain/medication_stock_snapshot.dart';
+import '../medication_command_failure_message.dart';
 import '../providers/medication_providers.dart';
 import '../widgets/inventory_event_form_sheet.dart';
 
@@ -39,13 +42,27 @@ class MedicationDetailsScreen extends ConsumerWidget {
   }
 }
 
-class _MedicationDetailsScaffold extends ConsumerWidget {
+class _MedicationDetailsScaffold extends ConsumerStatefulWidget {
   const _MedicationDetailsScaffold({required this.medication});
 
   final Medication medication;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MedicationDetailsScaffold> createState() {
+    return _MedicationDetailsScaffoldState();
+  }
+}
+
+class _MedicationDetailsScaffoldState
+    extends ConsumerState<_MedicationDetailsScaffold> {
+  bool _isConfirmingArchive = false;
+  bool _isArchiving = false;
+
+  bool get _isArchiveBusy => _isConfirmingArchive || _isArchiving;
+
+  @override
+  Widget build(BuildContext context) {
+    final Medication medication = widget.medication;
     final DateTime now = ref.watch(clockProvider)();
     final MedicationStockSnapshot snapshot = medication.stockAt(now);
     final AsyncValue<List<InventoryEvent>> history = ref.watch(
@@ -60,18 +77,26 @@ class _MedicationDetailsScaffold extends ConsumerWidget {
             : <Widget>[
                 IconButton(
                   tooltip: 'ویرایش مشخصات',
-                  onPressed: () => context.goNamed(
-                    'edit-medication',
-                    pathParameters: <String, String>{
-                      'medicationId': medication.id,
-                    },
-                  ),
+                  onPressed: _isArchiveBusy
+                      ? null
+                      : () => context.goNamed(
+                          'edit-medication',
+                          pathParameters: <String, String>{
+                            'medicationId': medication.id,
+                          },
+                        ),
                   icon: const Icon(Icons.edit_outlined),
                 ),
                 IconButton(
+                  key: Key('archive-${medication.id}'),
                   tooltip: 'آرشیو دارو',
-                  onPressed: () => _archive(context, ref),
-                  icon: const Icon(Icons.archive_outlined),
+                  onPressed: _isArchiveBusy ? null : _archive,
+                  icon: _isArchiving
+                      ? const SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.archive_outlined),
                 ),
               ],
       ),
@@ -88,9 +113,9 @@ class _MedicationDetailsScaffold extends ConsumerWidget {
               const SizedBox(height: 14),
               _ActionCard(
                 onRestock: () =>
-                    _showInventoryForm(context, InventoryEventType.restock),
+                    _showInventoryForm(InventoryEventType.restock),
                 onCorrection: () =>
-                    _showInventoryForm(context, InventoryEventType.correction),
+                    _showInventoryForm(InventoryEventType.correction),
               ),
             ],
             const SizedBox(height: 14),
@@ -123,42 +148,48 @@ class _MedicationDetailsScaffold extends ConsumerWidget {
     );
   }
 
-  Future<void> _showInventoryForm(
-    BuildContext context,
-    InventoryEventType type,
-  ) async {
+  Future<void> _showInventoryForm(InventoryEventType type) async {
     final bool? saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (BuildContext context) =>
-          InventoryEventFormSheet(medication: medication, type: type),
+      builder: (BuildContext context) => InventoryEventFormSheet(
+        medication: widget.medication,
+        type: type,
+      ),
     );
 
-    if (saved == true && context.mounted) {
+    if (saved == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${type.persianLabel} با موفقیت ثبت شد.')),
       );
     }
   }
 
-  Future<void> _archive(BuildContext context, WidgetRef ref) async {
+  Future<void> _archive() async {
+    if (_isArchiveBusy) {
+      return;
+    }
+
+    setState(() => _isConfirmingArchive = true);
     final bool confirmed =
         await showDialog<bool>(
           context: context,
           builder: (BuildContext context) => AlertDialog(
             title: const Text('آرشیو دارو؟'),
             content: Text(
-              '${medication.name} از فهرست داروهای فعال حذف می‌شود، اما '
+              '${widget.medication.name} از فهرست داروهای فعال حذف می‌شود، اما '
               'اطلاعات و تاریخچه آن پاک نخواهد شد.',
             ),
             actions: <Widget>[
               TextButton(
+                key: const Key('cancel-archive-medication'),
                 onPressed: () => Navigator.of(context).pop(false),
                 child: const Text('انصراف'),
               ),
               FilledButton.tonal(
+                key: const Key('confirm-archive-medication'),
                 onPressed: () => Navigator.of(context).pop(true),
                 child: const Text('آرشیو'),
               ),
@@ -167,32 +198,108 @@ class _MedicationDetailsScaffold extends ConsumerWidget {
         ) ??
         false;
 
-    if (!confirmed || !context.mounted) {
+    if (!mounted) {
       return;
     }
+    if (!confirmed) {
+      setState(() => _isConfirmingArchive = false);
+      return;
+    }
+    setState(() {
+      _isConfirmingArchive = false;
+      _isArchiving = true;
+    });
+
+    final MedicationRepository repository = ref.read(
+      medicationRepositoryProvider,
+    );
+    final ProviderContainer container = ProviderScope.containerOf(
+      context,
+      listen: false,
+    );
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
 
     try {
-      final MedicationRepository repository = ref.read(
-        medicationRepositoryProvider,
-      );
-      await repository.archive(medication.id);
-      ref.invalidate(activeMedicationsProvider);
-      ref.invalidate(archivedMedicationsProvider);
-      ref.invalidate(medicationByIdProvider(medication.id));
-      if (context.mounted) {
+      await repository.archive(widget.medication.id);
+      _invalidateMedication(container, widget.medication.id);
+      if (mounted) {
         context.go('/');
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('دارو آرشیو شد.')));
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('${widget.medication.name} آرشیو شد.'),
+            action: SnackBarAction(
+              label: 'برگرداندن',
+              onPressed: () {
+                unawaited(
+                  _undoArchive(
+                    repository: repository,
+                    container: container,
+                    messenger: messenger,
+                    medication: widget.medication,
+                  ),
+                );
+              },
+            ),
+          ),
+        );
       }
-    } on Object {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('آرشیو دارو انجام نشد.')));
+    } on Object catch (error) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              MedicationCommandFailureMessage.resolve(
+                error,
+                fallback: 'آرشیو دارو انجام نشد. دوباره تلاش کنید.',
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isConfirmingArchive = false;
+          _isArchiving = false;
+        });
       }
     }
   }
+}
+
+Future<void> _undoArchive({
+  required MedicationRepository repository,
+  required ProviderContainer container,
+  required ScaffoldMessengerState messenger,
+  required Medication medication,
+}) async {
+  try {
+    await repository.restore(medication.id);
+    _invalidateMedication(container, medication.id);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(content: Text('${medication.name} به فهرست فعال برگشت.')),
+    );
+  } on Object catch (error) {
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          MedicationCommandFailureMessage.resolve(
+            error,
+            fallback: 'برگرداندن آرشیو انجام نشد. از بخش آرشیو تلاش کنید.',
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _invalidateMedication(ProviderContainer container, String medicationId) {
+  container.invalidate(activeMedicationsProvider);
+  container.invalidate(archivedMedicationsProvider);
+  container.invalidate(medicationByIdProvider(medicationId));
+  container.invalidate(inventoryEventsProvider(medicationId));
 }
 
 class _ArchivedNotice extends StatelessWidget {

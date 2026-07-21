@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/input/localized_number_parser.dart';
-import '../../../../core/presentation/command_failure_message.dart';
 import '../../domain/inventory_event.dart';
 import '../../domain/medication.dart';
+import '../medication_command_failure_message.dart';
 import '../providers/medication_providers.dart';
 
 class InventoryEventFormSheet extends ConsumerStatefulWidget {
@@ -28,7 +28,10 @@ class _InventoryEventFormSheetState
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _stockController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
+  bool _isReviewing = false;
   bool _isSaving = false;
+
+  bool get _isBusy => _isReviewing || _isSaving;
 
   @override
   void dispose() {
@@ -67,7 +70,7 @@ class _InventoryEventFormSheetState
                       ),
                     ),
                     IconButton(
-                      onPressed: _isSaving ? null : Navigator.of(context).pop,
+                      onPressed: _isBusy ? null : Navigator.of(context).pop,
                       tooltip: 'بستن',
                       icon: const Icon(Icons.close),
                     ),
@@ -124,14 +127,20 @@ class _InventoryEventFormSheetState
                 const SizedBox(height: 20),
                 FilledButton.icon(
                   key: const Key('review-inventory-event'),
-                  onPressed: _isSaving ? null : _save,
+                  onPressed: _isBusy ? null : _save,
                   icon: _isSaving
                       ? const SizedBox.square(
                           dimension: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.fact_check_outlined),
-                  label: Text(_isSaving ? 'در حال ثبت...' : 'بازبینی و ثبت'),
+                  label: Text(
+                    _isSaving
+                        ? 'در حال ثبت...'
+                        : _isReviewing
+                        ? 'در حال بازبینی...'
+                        : 'بازبینی و ثبت',
+                  ),
                 ),
               ],
             ),
@@ -142,6 +151,9 @@ class _InventoryEventFormSheetState
   }
 
   Future<void> _save() async {
+    if (_isBusy) {
+      return;
+    }
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
@@ -149,12 +161,20 @@ class _InventoryEventFormSheetState
     final double stockUnits = LocalizedNumberParser.tryParseDouble(
       _stockController.text,
     )!;
+    setState(() => _isReviewing = true);
     final bool confirmed = await _review(stockUnits);
-    if (!confirmed || !mounted) {
+    if (!mounted) {
       return;
     }
+    if (!confirmed) {
+      setState(() => _isReviewing = false);
+      return;
+    }
+    setState(() {
+      _isReviewing = false;
+      _isSaving = true;
+    });
 
-    setState(() => _isSaving = true);
     try {
       await ref
           .read(inventoryEventServiceProvider)
@@ -176,7 +196,7 @@ class _InventoryEventFormSheetState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              CommandFailureMessage.resolve(
+              MedicationCommandFailureMessage.resolve(
                 error,
                 fallback: 'ثبت موجودی انجام نشد. دوباره تلاش کنید.',
               ),
@@ -186,7 +206,10 @@ class _InventoryEventFormSheetState
       }
     } finally {
       if (mounted) {
-        setState(() => _isSaving = false);
+        setState(() {
+          _isReviewing = false;
+          _isSaving = false;
+        });
       }
     }
   }

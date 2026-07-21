@@ -1,18 +1,18 @@
-import '../../features/medication_inventory/application/medication_lifecycle.dart';
+import '../application/medication_lifecycle.dart';
 
-abstract final class CommandFailureMessage {
+abstract final class MedicationCommandFailureMessage {
   static String resolve(Object error, {required String fallback}) {
     if (error is MedicationNotFoundException) {
-      return 'این مورد دیگر در دسترس نیست. صفحه را تازه‌سازی کنید.';
+      return 'این دارو دیگر در دسترس نیست. صفحه را تازه‌سازی کنید.';
     }
     if (error is MedicationLifecycleViolation) {
       return switch (error.state) {
         MedicationLifecycleState.archived =>
-          'این مورد آرشیو شده است. ابتدا آن را بازیابی کنید.',
+          'این دارو آرشیو شده است. ابتدا آن را بازیابی کنید.',
         MedicationLifecycleState.active =>
-          'این عملیات در وضعیت فعلی قابل انجام نیست.',
+          'این عملیات در وضعیت فعلی دارو قابل انجام نیست.',
         MedicationLifecycleState.missing =>
-          'این مورد دیگر در دسترس نیست. صفحه را تازه‌سازی کنید.',
+          'این دارو دیگر در دسترس نیست. صفحه را تازه‌سازی کنید.',
       };
     }
     if (error is ArgumentError || error is FormatException) {

@@ -1,15 +1,29 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/widgets/empty_state.dart';
 import '../../domain/medication.dart';
+import '../medication_command_failure_message.dart';
 import '../providers/medication_providers.dart';
 
-class ArchivedMedicationsScreen extends ConsumerWidget {
+class ArchivedMedicationsScreen extends ConsumerStatefulWidget {
   const ArchivedMedicationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ArchivedMedicationsScreen> createState() {
+    return _ArchivedMedicationsScreenState();
+  }
+}
+
+class _ArchivedMedicationsScreenState
+    extends ConsumerState<ArchivedMedicationsScreen> {
+  final Set<String> _confirmingMedicationIds = <String>{};
+  final Set<String> _savingMedicationIds = <String>{};
+
+  @override
+  Widget build(BuildContext context) {
     final AsyncValue<List<Medication>> medications = ref.watch(
       archivedMedicationsProvider,
     );
@@ -43,8 +57,14 @@ class ArchivedMedicationsScreen extends ConsumerWidget {
               final Medication medication = sorted[index];
               return _ArchivedMedicationCard(
                 medication: medication,
-                onRestore: () => _restore(context, ref, medication),
-                onDelete: () => _delete(context, ref, medication),
+                isBusy: _isBusy(medication.id),
+                showProgress: _savingMedicationIds.contains(medication.id),
+                onRestore: () {
+                  unawaited(_restore(medication));
+                },
+                onDelete: () {
+                  unawaited(_delete(medication));
+                },
               );
             },
           );
@@ -60,33 +80,51 @@ class ArchivedMedicationsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _restore(
-    BuildContext context,
-    WidgetRef ref,
-    Medication medication,
-  ) async {
+  bool _isBusy(String medicationId) {
+    return _confirmingMedicationIds.contains(medicationId) ||
+        _savingMedicationIds.contains(medicationId);
+  }
+
+  Future<void> _restore(Medication medication) async {
+    if (_isBusy(medication.id)) {
+      return;
+    }
+    setState(() => _savingMedicationIds.add(medication.id));
+
     try {
       await ref.read(medicationRepositoryProvider).restore(medication.id);
-      _invalidate(ref, medication.id);
-      if (context.mounted) {
+      _invalidate(medication.id);
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${medication.name} به فهرست فعال برگشت.')),
         );
       }
-    } on Object {
-      if (context.mounted) {
+    } on Object catch (error) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('بازیابی دارو انجام نشد.')),
+          SnackBar(
+            content: Text(
+              MedicationCommandFailureMessage.resolve(
+                error,
+                fallback: 'بازیابی دارو انجام نشد. دوباره تلاش کنید.',
+              ),
+            ),
+          ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _savingMedicationIds.remove(medication.id));
       }
     }
   }
 
-  Future<void> _delete(
-    BuildContext context,
-    WidgetRef ref,
-    Medication medication,
-  ) async {
+  Future<void> _delete(Medication medication) async {
+    if (_isBusy(medication.id)) {
+      return;
+    }
+    setState(() => _confirmingMedicationIds.add(medication.id));
+
     final bool confirmed =
         await showDialog<bool>(
           context: context,
@@ -98,10 +136,12 @@ class ArchivedMedicationsScreen extends ConsumerWidget {
             ),
             actions: <Widget>[
               TextButton(
+                key: Key('cancel-delete-${medication.id}'),
                 onPressed: () => Navigator.of(context).pop(false),
                 child: const Text('انصراف'),
               ),
               FilledButton(
+                key: Key('confirm-delete-${medication.id}'),
                 style: FilledButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.error,
                   foregroundColor: Theme.of(context).colorScheme.onError,
@@ -113,30 +153,47 @@ class ArchivedMedicationsScreen extends ConsumerWidget {
           ),
         ) ??
         false;
-    if (!confirmed || !context.mounted) {
+
+    if (!mounted) {
       return;
     }
+    setState(() => _confirmingMedicationIds.remove(medication.id));
+    if (!confirmed) {
+      return;
+    }
+    setState(() => _savingMedicationIds.add(medication.id));
 
     try {
       await ref
           .read(medicationRepositoryProvider)
           .deletePermanently(medication.id);
-      _invalidate(ref, medication.id);
-      if (context.mounted) {
+      _invalidate(medication.id);
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('دارو و تاریخچه آن حذف شد.')),
         );
       }
-    } on Object {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('حذف دائمی انجام نشد.')));
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              MedicationCommandFailureMessage.resolve(
+                error,
+                fallback: 'حذف دائمی انجام نشد. دوباره تلاش کنید.',
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _savingMedicationIds.remove(medication.id));
       }
     }
   }
 
-  void _invalidate(WidgetRef ref, String medicationId) {
+  void _invalidate(String medicationId) {
     ref.invalidate(activeMedicationsProvider);
     ref.invalidate(archivedMedicationsProvider);
     ref.invalidate(medicationByIdProvider(medicationId));
@@ -147,11 +204,15 @@ class ArchivedMedicationsScreen extends ConsumerWidget {
 class _ArchivedMedicationCard extends StatelessWidget {
   const _ArchivedMedicationCard({
     required this.medication,
+    required this.isBusy,
+    required this.showProgress,
     required this.onRestore,
     required this.onDelete,
   });
 
   final Medication medication;
+  final bool isBusy;
+  final bool showProgress;
   final VoidCallback onRestore;
   final VoidCallback onDelete;
 
@@ -191,16 +252,21 @@ class _ArchivedMedicationCard extends StatelessWidget {
                 Expanded(
                   child: FilledButton.tonalIcon(
                     key: Key('restore-${medication.id}'),
-                    onPressed: onRestore,
-                    icon: const Icon(Icons.unarchive_outlined),
-                    label: const Text('بازیابی'),
+                    onPressed: isBusy ? null : onRestore,
+                    icon: showProgress
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.unarchive_outlined),
+                    label: Text(showProgress ? 'در حال انجام...' : 'بازیابی'),
                   ),
                 ),
                 const SizedBox(width: 10),
                 IconButton.filledTonal(
                   key: Key('delete-${medication.id}'),
                   tooltip: 'حذف دائمی',
-                  onPressed: onDelete,
+                  onPressed: isBusy ? null : onDelete,
                   icon: const Icon(Icons.delete_forever_outlined),
                 ),
               ],
