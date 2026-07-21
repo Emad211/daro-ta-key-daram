@@ -38,6 +38,7 @@ Issue `#22` and draft PR `#23` establish the accessibility baseline:
 - medication-unit and consumption-schedule dropdowns expanded with single-line ellipsis behavior for large system text
 - inventory bottom sheet exposes a stable scroll region for large-text interaction
 - quantity review dialog is scrollable when system text expands its content
+- swipe-based tests verify the inventory review action is fully visible and tappable at every supported text scale
 - semantics resources are released deterministically after every scale scenario
 
 The increment remains draft until strict CI, the complete test suite, and the Android debug APK build pass.
