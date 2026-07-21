@@ -44,7 +44,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('متفورمین'), findsOneWidget);
-    expect(find.text('تاریخچه موجودی'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(FilledButton, 'خرید مجدد'));
     await tester.pumpAndSettle();
@@ -56,7 +55,16 @@ void main() {
     await tester.tap(find.byKey(const Key('confirm-inventory-event')));
     await tester.pumpAndSettle();
 
-    expect(find.text('40 قرص'), findsOneWidget);
+    final Finder historyTitle = find.text('تاریخچه موجودی');
+    await tester.scrollUntilVisible(
+      historyTitle,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(historyTitle, findsOneWidget);
+    expect(find.text('40\nقرص'), findsOneWidget);
     expect(find.text('خرید مجدد'), findsWidgets);
     expect(find.text('خرید مجدد با موفقیت ثبت شد.'), findsOneWidget);
   });

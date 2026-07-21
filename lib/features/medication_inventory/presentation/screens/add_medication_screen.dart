@@ -81,6 +81,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
               DropdownButtonFormField<MedicationUnit>(
                 key: const Key('add-medication-unit'),
                 initialValue: _selectedUnit,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'واحد موجودی',
                   prefixIcon: Icon(Icons.category_outlined),
@@ -89,7 +90,11 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                     .map(
                       (MedicationUnit unit) => DropdownMenuItem<MedicationUnit>(
                         value: unit,
-                        child: Text(unit.persianLabel),
+                        child: Text(
+                          unit.persianLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     )
                     .toList(growable: false),

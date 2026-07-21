@@ -86,24 +86,28 @@ class MedicationCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: urgencyStyle.background,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                    child: Text(
-                      snapshot.urgency.persianLabel,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: urgencyStyle.foreground,
-                        fontWeight: FontWeight.w700,
-                      ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: urgencyStyle.background,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    snapshot.urgency.persianLabel,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: urgencyStyle.foreground,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ],
+                ),
               ),
               const SizedBox(height: 16),
               const Divider(height: 1),
