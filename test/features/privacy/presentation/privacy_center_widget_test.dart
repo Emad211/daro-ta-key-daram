@@ -87,7 +87,16 @@ void main() {
       );
 
       notifications.failCancelAll = false;
-      await tester.tap(find.byKey(const Key('retry-notification-cleanup')));
+      final Finder retryCleanup = find.byKey(
+        const Key('retry-notification-cleanup'),
+      );
+      await tester.scrollUntilVisible(
+        retryCleanup,
+        240,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(retryCleanup);
       await tester.pumpAndSettle();
 
       expect(notifications.cancelAllCalls, 2);
