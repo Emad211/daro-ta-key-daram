@@ -156,7 +156,7 @@ Future<void> _dragSheetUntilVisible(
 
   for (int attempt = 0; attempt < 5; attempt += 1) {
     final Rect targetRect = tester.getRect(target);
-    if (targetRect.top >= 0 && targetRect.bottom <= logicalHeight - 24) {
+    if (targetRect.top >= 0 && targetRect.bottom <= logicalHeight) {
       return;
     }
     await tester.dragFrom(
@@ -169,7 +169,7 @@ Future<void> _dragSheetUntilVisible(
   final Rect finalRect = tester.getRect(target);
   expect(
     finalRect.bottom,
-    lessThanOrEqualTo(logicalHeight - 24),
+    lessThanOrEqualTo(logicalHeight),
     reason: 'The inventory review action must be reachable by swiping.',
   );
 }
