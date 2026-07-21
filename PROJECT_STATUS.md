@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Quality and release hardening before physical-device notification verification and closed beta.
+Release engineering before physical-device verification and closed beta.
 
 ## Completed on `main`
 
@@ -21,32 +21,27 @@ Quality and release hardening before physical-device notification verification a
 - [x] Android project with application ID `ir.emadkarimi.darutakey`
 - [x] Strict CI for code generation, schema parity, formatting, analyzer, tests, debug APK build, and artifact upload
 
-## Current engineering increment
+## Validated for merge in PR `#23`
 
-Issue `#22` and draft PR `#23` establish the accessibility baseline:
+- Persian RTL is the canonical regression direction.
+- Dashboard, add, details, quantity review, edit, and archive flows pass on a narrow 360 × 640 viewport.
+- Text scales 1.0, 1.3, and 2.0 pass with realistic swipe interaction.
+- Critical icon-only controls expose explicit Persian semantic labels.
+- Summary metrics, urgency state, action groups, dropdowns, bottom sheets, and dialogs adapt without RenderFlex overflow.
+- The full existing regression suite remains green after the layout changes.
+- Strict Flutter CI run `#283` passed Drift schema parity, formatting, analyzer, all tests, Android debug APK build, and artifact upload.
 
-- Persian RTL as the canonical regression direction
-- narrow 360 × 640 logical-pixel phone viewport
-- text scales 1.0, 1.3, and 2.0
-- dashboard, add, details, quantity review, edit, and archive traversal
-- Persian semantics for critical icon-only actions
-- tests that fail on uncaught Flutter rendering exceptions
-- measured dashboard summary metrics changed to vertical content
-- medication urgency state moved outside the constrained title row
-- details write actions changed to a vertically adaptive layout
-- explicit semantic labels added to archive, reminder, edit, archive-command, and permanent-delete icon controls
-- medication-unit and consumption-schedule dropdowns expanded with single-line ellipsis behavior for large system text
-- inventory bottom sheet exposes a stable scroll region for large-text interaction
-- quantity review dialog is scrollable when system text expands its content
-- swipe-based tests verify the inventory review action is fully visible and tappable at every supported text scale
-- semantics resources are released deterministically after every scale scenario
+## Device-only work still required
 
-The increment remains draft until strict CI, the complete test suite, and the Android debug APK build pass.
+- Run the notification checklist in Issue `#10` on Android hardware.
+- Verify TalkBack reading order and spoken labels.
+- Verify display-size plus font-size combinations and small-device gestures.
+- Complete final brand color-contrast review.
 
 ## Next engineering increments
 
-1. Run the physical-device notification checklist in Issue `#10`.
-2. Replace debug signing with a secure release signing workflow and produce an internal AAB.
+1. Replace debug signing with a secure release-signing workflow and produce an internal AAB.
+2. Run physical-device notification and accessibility verification.
 3. Integrate Adivery behind `AdService` with the safety caps in Issue `#3`.
 4. Add privacy-safe technical analytics containing no medication names, schedules, stock, notes, or health attributes.
 5. Prepare privacy policy, store listing, and a 10–20 user closed beta.
@@ -55,5 +50,5 @@ The increment remains draft until strict CI, the complete test suite, and the An
 
 - GitHub repository: `Emad211/daro-ta-key-daram`
 - Default branch: `main`
-- Active accessibility PR: `#23`
+- Accessibility PR ready for final validation: `#23`
 - Repository and strict CI are the source of truth for subsequent engineering work.
