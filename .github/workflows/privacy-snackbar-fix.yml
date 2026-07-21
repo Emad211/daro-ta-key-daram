@@ -1,0 +1,50 @@
+name: Privacy Snackbar Fix Apply
+
+on:
+  push:
+    branches:
+      - agent/privacy-center-data-deletion
+
+permissions:
+  contents: write
+
+jobs:
+  apply-stable-assertion:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout source branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/privacy-center-data-deletion
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Apply stable retry assertion
+        run: python3 tool/fix_privacy_snackbar_test.py
+
+      - name: Format updated test
+        run: dart format test/features/privacy/presentation/privacy_center_widget_test.dart
+
+      - name: Remove diagnostic and staging files
+        run: |
+          rm -f tool/fix_privacy_snackbar_test.py
+          rm -f .github/workflows/privacy-full-suite-diagnostics.yml
+          rm -f .github/workflows/privacy-snackbar-fix.yml
+
+      - name: Commit stable retry assertion
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'test: assert stable privacy cleanup state'
+          git push origin HEAD:agent/privacy-center-data-deletion
