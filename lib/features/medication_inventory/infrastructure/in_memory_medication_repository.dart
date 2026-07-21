@@ -88,6 +88,20 @@ class InMemoryMedicationRepository implements MedicationRepository {
   }
 
   @override
+  Future<void> deleteAll() async {
+    final Set<String> medicationIds = <String>{
+      ..._items.map((Medication medication) => medication.id),
+      ..._eventsByMedicationId.keys,
+    };
+    _items.clear();
+    _eventsByMedicationId.clear();
+    _emit();
+    for (final String medicationId in medicationIds) {
+      _inventoryChanges.add(medicationId);
+    }
+  }
+
+  @override
   Future<Medication?> findById(String medicationId) async {
     for (final Medication medication in _items) {
       if (medication.id == medicationId) {

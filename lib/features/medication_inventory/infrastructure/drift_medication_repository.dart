@@ -51,6 +51,13 @@ final class DriftMedicationRepository implements MedicationRepository {
   }
 
   @override
+  Future<void> deleteAll() async {
+    await _database.transaction(() async {
+      await _database.delete(_database.medications).go();
+    });
+  }
+
+  @override
   Future<Medication?> findById(String medicationId) async {
     final MedicationRow? medicationRow =
         await (_database.select(_database.medications)

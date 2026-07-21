@@ -69,4 +69,10 @@ final class NotificationAwareMedicationRepository
     await _delegate.deletePermanently(medicationId);
     await _notifications.cancelMedication(medicationId);
   }
+
+  @override
+  Future<void> deleteAll() async {
+    await _delegate.deleteAll();
+    await _notifications.cancelAll();
+  }
 }

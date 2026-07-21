@@ -40,8 +40,7 @@ class _PrivacyCenterScreenState extends ConsumerState<PrivacyCenterScreen> {
             deletionCompleted: _deletionCompleted,
             notificationCleanupPending: _notificationCleanupPending,
             onDelete: _isBusy ? null : _confirmAndDelete,
-            onRetryCleanup:
-                _notificationCleanupPending && !_isBusy
+            onRetryCleanup: _notificationCleanupPending && !_isBusy
                 ? _retryNotificationCleanup
                 : null,
           ),

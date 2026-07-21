@@ -8,6 +8,7 @@ import '../../../notifications/infrastructure/flutter_local_notification_service
 import '../../../notifications/infrastructure/noop_local_notification_service.dart';
 import '../../../notifications/infrastructure/notification_aware_medication_repository.dart';
 import '../../application/inventory_event_service.dart';
+import '../../application/local_medication_data_deletion_service.dart';
 import '../../application/medication_repository.dart';
 import '../../domain/inventory_event.dart';
 import '../../domain/medication.dart';
@@ -64,6 +65,15 @@ final Provider<InventoryEventService> inventoryEventServiceProvider =
       return InventoryEventService(
         ref.watch(medicationRepositoryProvider),
         ref.watch(clockProvider),
+      );
+    });
+
+final Provider<LocalMedicationDataDeletionService>
+localMedicationDataDeletionServiceProvider =
+    Provider<LocalMedicationDataDeletionService>((Ref ref) {
+      return LocalMedicationDataDeletionService(
+        ref.watch(rawMedicationRepositoryProvider),
+        ref.watch(notificationSyncCoordinatorProvider),
       );
     });
 
