@@ -9,46 +9,53 @@ Physical-device verification, permanent release key setup, and closed-beta prepa
 - [x] Product scope, safety boundaries, and ad-only monetization policy
 - [x] Flutter application architecture and Persian RTL vertical slice
 - [x] Drift/SQLite schema, snapshot enforcement, and transactional repository
-- [x] Medication details, restock, correction, immutable history, edit, archive, restore, and permanent deletion
+- [x] Medication details, restock, correction, immutable history, edit, archive, restore, permanent deletion, and full local medication erasure
 - [x] Structured daily, every-N-days, and selected-weekday consumption schedules
 - [x] Schema v1-to-v2 migration and schedule-change inventory baselines
-- [x] Hardened stock calculation precision and boundary invariants
-- [x] Typed create, details, quantity, archive, restore, and delete repository commands
-- [x] Explicit active / archived / missing lifecycle state machine
-- [x] Typed Persian command failures, retained form state, duplicate-submit guards, quantity review, schedule confirmation, and archive undo
+- [x] Typed Persian write failures, review gates, duplicate-submit guards, undo, and recoverable notification cleanup
 - [x] Stable notification scheduling, cancellation, deep links, reboot persistence, and timezone fallback
 - [x] Automated Persian RTL and large-text coverage at scales 1.0, 1.3, and 2.0
-- [x] Android release signing without debug fallback, disposable-key AAB validation, and secret-backed manual release workflow
+- [x] Privacy center, atomic medication-data deletion, and Persian privacy-policy draft
+- [x] Android release signing without debug fallback and disposable-key AAB validation
 
-## Validated for merge in PR `#27`
+## Validated for merge in PR `#29`
 
-- Persian privacy/about center accessible from the dashboard with explicit semantics.
-- Clear disclosure of current local medication storage, medical non-goals, notifications, and future third-party advertising boundaries.
-- One typed `deleteAll` repository command shared by Drift and in-memory implementations.
-- Drift transaction removes active and archived medication aggregate roots; inventory history follows by enforced foreign-key cascade.
-- Unrelated application preferences remain outside medication-domain erasure.
-- Dedicated application service performs persistence erasure before notification cleanup.
-- Typed result distinguishes complete success from pending notification cleanup.
-- Failed notification cleanup never implies database rollback and supports retry without re-deleting data.
-- Cancelling the destructive dialog produces no persistence or notification side effects.
-- Duplicate destructive submissions are disabled.
-- Privacy and destructive controls pass the narrow 360×640 Persian RTL matrix at text scales 1.0, 1.3, and 2.0.
-- Public-facing Persian privacy-policy draft includes explicit publisher/contact/HTTPS/SDK placeholders.
-- Strict Flutter CI run `#345` passed schema parity, formatting, analyzer, the complete regression suite, debug APK, disposable-key release AAB, signature/checksum validation, artifact upload, and signing-material cleanup.
+The increment was triggered by a physical-device installation failure in SAI. SAI received a `content://` document whose provider returned a null `DISPLAY_NAME`. The failure occurred before Android parsed or verified the APK.
 
-## Build artifacts from validation
+Validated changes:
 
-- Debug APK artifact digest: `sha256:345dd73f65bba583ac8b46552185a85b184136e9b914c74504e9f9dec289ff5c`
-- CI release AAB artifact digest: `sha256:599e9f083d3335567120a1af315d8f3e6d2f33488cd500ec3f33538105f6adce`
+- Secret-backed **Android Signed Release** workflow builds both a universal release APK and a store-candidate AAB.
+- Both files use the same commit, version inputs, and permanent upload signing identity.
+- APK verification uses Android SDK `apksigner` and requires a modern APK Signature Scheme.
+- AAB verification uses `jarsigner`.
+- SHA-256 checksum files are created for both outputs.
+- Artifact contains APK, AAB, checksums, build metadata, and Persian installation instructions.
+- Instructions explicitly require extracting the GitHub artifact ZIP and opening the APK with Android Package Installer rather than SAI.
+- Local release script builds and verifies both APK and AAB.
+- Strict CI builds an ephemeral signed release APK and AAB and validates both signatures without committing the key.
+- Device runbook covers clean install, signature mismatch, persistence, notifications, privacy erasure, TalkBack, largest text, upgrade, ADB installation, and closed-beta exit criteria.
+- Strict Flutter CI run `#356` passed source checks, the full regression suite, debug APK, ephemeral release APK, `apksigner`, release AAB, `jarsigner`, checksums, artifact upload, and cleanup.
 
-The CI AAB is signed by a disposable key and must not be uploaded to a store.
+## Validation artifacts
+
+- Debug APK artifact digest: `sha256:b9f69cfb124a5f78a993f54e4f1715df59c7c49e04dacb5e87b5d1a52ba1d347`
+- CI release-validation artifact digest: `sha256:dc66a84182bef6d4c47600a6d8dac35dd7678693b11713ed64ae42839705e907`
+
+The disposable-key release APK and AAB prove the build and signature path only. They must not establish store ownership or permanent upgrade continuity.
+
+## Direct debug APK currently available
+
+The current debug APK can be installed without SAI by downloading the raw `.apk` file and opening it from Files / My Files with Android Package Installer.
+
+A debug build may not upgrade directly to the future permanently signed internal APK because Android requires compatible signing certificates. The first transition may require uninstalling the debug build, which removes local app data.
 
 ## Maintainer-owned release material still required
 
 - Generate the permanent upload keystore once.
 - Store at least two encrypted backups and record the certificate SHA-256 fingerprint.
 - Configure the four GitHub repository secrets described in `docs/08-android-release-signing.md`.
-- Run the manual **Android Signed Release** workflow to produce the first store-candidate AAB.
+- Run **Android Signed Release** to produce the first permanently signed APK/AAB pair.
+- Preserve the same signing identity for future internal upgrade tests.
 
 ## Publication material still required
 
@@ -59,22 +66,26 @@ The CI AAB is signed by a disposable key and must not be uploaded to a store.
 
 ## Device-only work still required
 
+- Install the raw debug APK with Android Package Installer and confirm launch.
+- Run the full checklist in `docs/10-android-device-validation.md`.
 - Run the notification checklist in Issue `#10` on Android hardware.
 - Verify TalkBack reading order and spoken labels.
 - Verify display-size plus font-size combinations and small-device gestures.
 - Complete final brand color-contrast review.
+- After configuring the permanent key, validate clean install and upgrade with permanently signed APKs.
 
 ## Next engineering increments
 
-1. Merge PR `#27` after the final documentation CI run.
-2. Run physical-device notification, installation, upgrade, and accessibility verification.
-3. Create and protect the permanent upload key and produce the first store-candidate AAB.
-4. Integrate Adivery behind `AdService` with the safety caps in Issue `#3`.
-5. Finalize privacy/store metadata and start a 10–20 user closed beta.
+1. Merge PR `#29` after the final exact-head documentation CI run.
+2. Create and protect the permanent upload key and configure repository secrets.
+3. Produce the first permanently signed internal APK and store-candidate AAB.
+4. Execute and record physical-device installation, notification, privacy, accessibility, and upgrade checks.
+5. Integrate Adivery behind `AdService` with the safety caps in Issue `#3`.
+6. Finalize privacy/store metadata and start a 10–20 user closed beta.
 
 ## Repository
 
 - GitHub repository: `Emad211/daro-ta-key-daram`
 - Default branch: `main`
-- Privacy-control PR ready for final validation: `#27`
+- Signed-APK/device-validation PR ready for final validation: `#29`
 - Repository and strict CI are the source of truth for subsequent engineering work.

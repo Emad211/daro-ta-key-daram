@@ -62,6 +62,18 @@ if [[ ! -f android/key.properties ]]; then
   exit 1
 fi
 
+android_sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+if [[ -z "$android_sdk_root" ]]; then
+  echo "ANDROID_SDK_ROOT or ANDROID_HOME is required to locate apksigner." >&2
+  exit 1
+fi
+
+apksigner="$(find "$android_sdk_root/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+if [[ -z "$apksigner" || ! -x "$apksigner" ]]; then
+  echo "apksigner was not found in Android SDK build-tools." >&2
+  exit 1
+fi
+
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 dart format --output=none --set-exit-if-changed lib test
@@ -72,24 +84,41 @@ flutter test
 args=(--release)
 [[ -z "$build_name" ]] || args+=(--build-name "$build_name")
 [[ -z "$build_number" ]] || args+=(--build-number "$build_number")
+flutter build apk "${args[@]}"
 flutter build appbundle "${args[@]}"
 
+apk="build/app/outputs/flutter-apk/app-release.apk"
 bundle="build/app/outputs/bundle/release/app-release.aab"
+test -f "$apk"
 test -f "$bundle"
 
-signature_log="$(mktemp)"
-trap 'rm -f "$signature_log"' EXIT
-jarsigner -verify -verbose -certs "$bundle" | tee "$signature_log"
-grep -F 'jar verified.' "$signature_log" >/dev/null
+apk_signature_log="$(mktemp)"
+aab_signature_log="$(mktemp)"
+trap 'rm -f "$apk_signature_log" "$aab_signature_log"' EXIT
 
-if command -v sha256sum >/dev/null 2>&1; then
-  sha256sum "$bundle" | tee "$bundle.sha256"
-elif command -v shasum >/dev/null 2>&1; then
-  shasum -a 256 "$bundle" | tee "$bundle.sha256"
-else
-  echo "Neither sha256sum nor shasum is available." >&2
-  exit 1
-fi
+"$apksigner" verify --verbose --print-certs "$apk" | tee "$apk_signature_log"
+grep -Eq 'Verified using v2 scheme.*: true|Verified using v3 scheme.*: true' "$apk_signature_log"
 
+jarsigner -verify -verbose -certs "$bundle" | tee "$aab_signature_log"
+grep -F 'jar verified.' "$aab_signature_log" >/dev/null
+
+checksum() {
+  local target="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$target" | tee "$target.sha256"
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$target" | tee "$target.sha256"
+  else
+    echo "Neither sha256sum nor shasum is available." >&2
+    exit 1
+  fi
+}
+
+checksum "$apk"
+checksum "$bundle"
+
+printf '\nSigned Android internal APK created successfully:\n%s\n' "$apk"
+printf 'APK checksum:\n%s.sha256\n' "$apk"
 printf '\nSigned Android App Bundle created successfully:\n%s\n' "$bundle"
-printf 'Checksum file:\n%s.sha256\n' "$bundle"
+printf 'AAB checksum:\n%s.sha256\n' "$bundle"
+printf '\nInstall the APK with Android Package Installer. Do not use SAI for this single APK.\n'

@@ -16,9 +16,9 @@ permissions:
   contents: read
 
 jobs:
-  signed-aab:
+  signed-android:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 55
 
     steps:
       - name: Checkout
@@ -106,7 +106,7 @@ jobs:
           ANDROID_UPLOAD_STORE_FILE: upload-keystore.jks
         run: cd android && ./gradlew :app:verifyReleaseSigning
 
-      - name: Build signed release AAB
+      - name: Build signed release APK and AAB
         shell: bash
         env:
           ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
@@ -122,25 +122,76 @@ jobs:
           [[ -z "$RELEASE_BUILD_NAME" ]] || args+=(--build-name "$RELEASE_BUILD_NAME")
           [[ -z "$RELEASE_BUILD_NUMBER" ]] || args+=(--build-number "$RELEASE_BUILD_NUMBER")
 
+          flutter build apk "${args[@]}"
           flutter build appbundle "${args[@]}"
 
-      - name: Verify signature and create checksum
+      - name: Verify APK and AAB signatures
         shell: bash
         run: |
           set -euo pipefail
+          apk=build/app/outputs/flutter-apk/app-release.apk
           bundle=build/app/outputs/bundle/release/app-release.aab
+          test -f "$apk"
           test -f "$bundle"
+
+          apksigner="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$apksigner"
+          test -x "$apksigner"
+
+          "$apksigner" verify --verbose --print-certs "$apk" | tee /tmp/apk-signature.log
+          grep -Eq 'Verified using v2 scheme.*: true|Verified using v3 scheme.*: true' /tmp/apk-signature.log
+
           jarsigner -verify -verbose -certs "$bundle" | tee /tmp/aab-signature.log
           grep -F 'jar verified.' /tmp/aab-signature.log
-          sha256sum "$bundle" > "$bundle.sha256"
 
-      - name: Upload signed AAB
+      - name: Create checksums and internal install metadata
+        shell: bash
+        env:
+          RELEASE_BUILD_NAME: ${{ inputs.build_name }}
+          RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          set -euo pipefail
+          output=build/app/outputs/internal-release
+          apk=build/app/outputs/flutter-apk/app-release.apk
+          bundle=build/app/outputs/bundle/release/app-release.aab
+          mkdir -p "$output"
+
+          cp "$apk" "$output/daro-ta-key-internal-release.apk"
+          cp "$bundle" "$output/daro-ta-key-store-candidate.aab"
+          sha256sum "$output/daro-ta-key-internal-release.apk" > "$output/daro-ta-key-internal-release.apk.sha256"
+          sha256sum "$output/daro-ta-key-store-candidate.aab" > "$output/daro-ta-key-store-candidate.aab.sha256"
+
+          pubspec_version="$(awk '/^version:/{print $2; exit}' pubspec.yaml)"
+          signer_digest="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' /tmp/apk-signature.log | head -n 1)"
+          cat > "$output/BUILD-METADATA.txt" <<EOF
+          Product: Daro Ta Key Daram
+          Application ID: ir.emadkarimi.darutakey
+          Commit: $GITHUB_SHA
+          Workflow run: $GITHUB_RUN_NUMBER
+          Pubspec version: $pubspec_version
+          Requested build name: ${RELEASE_BUILD_NAME:-not overridden}
+          Requested build number: ${RELEASE_BUILD_NUMBER:-not overridden}
+          APK signer certificate SHA-256: ${signer_digest:-see APK verification log}
+          EOF
+
+          cat > "$output/INSTALL-APK-FA.txt" <<'EOF'
+          راهنمای نصب APK داخلی
+
+          1. فایل artifact گیت‌هاب به‌صورت ZIP دانلود می‌شود؛ ابتدا ZIP را Extract کنید.
+          2. فایل daro-ta-key-internal-release.apk را به پوشه Downloads یا حافظه داخلی منتقل کنید.
+          3. از برنامه Files / My Files روی خود فایل APK بزنید.
+          4. گزینه Package Installer / نصب‌کننده بسته را انتخاب کنید.
+          5. برای این APK تک‌فایلی از SAI استفاده نکنید؛ SAI برای split APK/APKS است.
+          6. اگر خطای ناسازگاری امضا دیدید، نسخه debug یا نسخه‌ای با کلید دیگر را حذف و سپس APK داخلی را نصب کنید.
+
+          فایل AAB قابل نصب مستقیم نیست و فقط برای بارگذاری در فروشگاه است.
+          EOF
+
+      - name: Upload signed Android internal release
         uses: actions/upload-artifact@v4
         with:
-          name: daro-ta-key-signed-aab-${{ github.run_number }}
-          path: |
-            build/app/outputs/bundle/release/app-release.aab
-            build/app/outputs/bundle/release/app-release.aab.sha256
+          name: daro-ta-key-signed-android-${{ github.run_number }}
+          path: build/app/outputs/internal-release/
           if-no-files-found: error
           retention-days: 14
 

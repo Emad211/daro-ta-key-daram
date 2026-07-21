@@ -25,7 +25,8 @@
 - تست خودکار RTL و متن بزرگ در مقیاس‌های ۱٫۰، ۱٫۳ و ۲٫۰
 - release signing صریح بدون fallback به کلید debug
 - privacy center فارسی و حذف اتمیک همه اطلاعات دارویی محلی
-- CI شامل code generation، schema parity، format، analyze، test، debug APK و release AAB validation
+- ساخت و اعتبارسنجی release APK مستقیم و store-candidate AAB
+- CI شامل code generation، schema parity، format، analyze، test، debug APK، release APK و release AAB validation
 
 ## مدل کسب‌وکار
 
@@ -67,15 +68,40 @@ build/app/outputs/flutter-apk/app-debug.apk
 
 CI نیز APK را با نام `daro-ta-key-debug-apk` برای هفت روز نگه می‌دارد.
 
-## Release signing و AAB
+## Release signing، APK داخلی و AAB
 
-ساخت release عمداً بدون `android/key.properties` و upload keystore معتبر متوقف می‌شود. release هیچ‌گاه با کلید debug امضا نمی‌شود.
+ساخت release عمداً بدون `android/key.properties` یا environment signing معتبر متوقف می‌شود. release هیچ‌گاه با کلید debug امضا نمی‌شود.
 
 راهنمای کامل تولید کلید، backup، GitHub Secrets و workflow دستی:
 
 [`docs/08-android-release-signing.md`](docs/08-android-release-signing.md)
 
-CI یک AAB با کلید موقت تولید می‌کند تا مسیر release را اعتبارسنجی کند. این artifact برای store upload نیست. AAB کاندید انتشار فقط از workflow دستی **Android Signed Release** و کلید دائمی مالک پروژه ساخته می‌شود.
+ساخت محلی امن:
+
+```bash
+bash tool/build_signed_android_release.sh
+```
+
+این فرمان دو خروجی می‌سازد و امضای هر دو را بررسی می‌کند:
+
+```text
+build/app/outputs/flutter-apk/app-release.apk
+build/app/outputs/bundle/release/app-release.aab
+```
+
+workflow دستی **Android Signed Release** نیز با کلید دائمی مالک پروژه یک artifact شامل APK نصب‌شدنی، AAB فروشگاه، checksumها، metadata و راهنمای فارسی نصب تولید می‌کند.
+
+### نصب APK بدون SAI
+
+GitHub Actions artifact را به‌صورت ZIP دانلود می‌کند. ابتدا ZIP را Extract کن و سپس فایل `daro-ta-key-internal-release.apk` را از **Files / My Files** با **Package Installer** باز کن.
+
+برای این APK تک‌فایلی از SAI استفاده نکن. خطای SAI درباره null بودن `DISPLAY_NAME` معمولاً از `ContentProvider` فایل‌منیجر یا مرورگر می‌آید و قبل از بررسی واقعی APK رخ می‌دهد.
+
+راهنمای کامل نصب، ارتقا، اعلان، حریم خصوصی و TalkBack:
+
+[`docs/10-android-device-validation.md`](docs/10-android-device-validation.md)
+
+CI یک release APK و AAB با کلید موقت می‌سازد تا مسیر release را اعتبارسنجی کند. این فایل‌های موقت برای اثبات upgrade continuity یا انتشار فروشگاه نیستند. artifact داخلی قابل استفاده فقط از workflow دستی و کلید دائمی تولید می‌شود.
 
 ## حریم خصوصی و حذف داده
 
@@ -107,7 +133,7 @@ privacy center داخل برنامه موارد زیر را توضیح می‌د
 - archive/delete اعلان را cancel می‌کند.
 - notification tap داروی مربوط را باز می‌کند.
 
-طراحی و چک‌لیست تست دستگاه: [`docs/07-notifications.md`](docs/07-notifications.md)
+طراحی اعلان‌ها: [`docs/07-notifications.md`](docs/07-notifications.md)
 
 ## مدیریت schema دیتابیس
 
@@ -150,6 +176,7 @@ test/
 7. خرید مجدد به‌عنوان موجودی کل جدید ثبت می‌شود.
 8. release بدون signing material معتبر تولید نمی‌شود و هرگز به debug signing برنمی‌گردد.
 9. فرمان «حذف همه اطلاعات دارویی» فقط دامنه دارویی برنامه را پاک می‌کند و درباره داده Android، فروشگاه یا سرویس ثالث ادعای نادرست ندارد.
+10. APK داخلی فقط با امضای معتبر نصب می‌شود؛ خطای signature mismatch دور زده نمی‌شود.
 
 ## اسناد مهندسی
 
@@ -164,6 +191,7 @@ test/
 - [معماری اعلان‌ها](docs/07-notifications.md)
 - [راهنمای Android release signing](docs/08-android-release-signing.md)
 - [پیش‌نویس سیاست حریم خصوصی فارسی](docs/09-privacy-policy-fa.md)
+- [نصب و اعتبارسنجی دستگاه Android](docs/10-android-device-validation.md)
 - [تصمیم‌های معماری](docs/adr/)
 
 ## نام و شناسه
