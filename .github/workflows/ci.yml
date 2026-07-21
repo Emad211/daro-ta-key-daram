@@ -11,7 +11,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -33,7 +33,7 @@ jobs:
       - name: Verify committed Android platform
         run: test -f android/app/build.gradle.kts
 
-      - name: Verify signing material and scripts
+      - name: Verify signing material, scripts, and release contract
         shell: bash
         run: |
           set -euo pipefail
@@ -51,6 +51,10 @@ jobs:
           bash -n tool/bootstrap.sh
           bash -n tool/export_drift_schema.sh
           bash -n tool/build_signed_android_release.sh
+          grep -F 'flutter build apk' .github/workflows/android-release.yml
+          grep -F 'flutter build appbundle' .github/workflows/android-release.yml
+          grep -F 'apksigner' .github/workflows/android-release.yml
+          grep -F 'INSTALL-APK-FA.txt' .github/workflows/android-release.yml
 
       - name: Install dependencies
         run: flutter pub get
@@ -139,17 +143,30 @@ jobs:
       - name: Verify environment-backed release signing
         run: cd android && ./gradlew :app:verifyReleaseSigning
 
-      - name: Build ephemeral signed release AAB
-        run: flutter build appbundle --release
+      - name: Build ephemeral signed release APK and AAB
+        run: |
+          flutter build apk --release
+          flutter build appbundle --release
 
-      - name: Verify AAB signature and checksum
+      - name: Verify release APK and AAB signatures
         shell: bash
         run: |
           set -euo pipefail
+          apk=build/app/outputs/flutter-apk/app-release.apk
           bundle=build/app/outputs/bundle/release/app-release.aab
+          test -f "$apk"
           test -f "$bundle"
+
+          apksigner="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$apksigner"
+          test -x "$apksigner"
+          "$apksigner" verify --verbose --print-certs "$apk" | tee /tmp/apk-signature.log
+          grep -Eq 'Verified using v2 scheme.*: true|Verified using v3 scheme.*: true' /tmp/apk-signature.log
+
           jarsigner -verify -verbose -certs "$bundle" | tee /tmp/aab-signature.log
           grep -F 'jar verified.' /tmp/aab-signature.log
+
+          sha256sum "$apk" > "$apk.sha256"
           sha256sum "$bundle" > "$bundle.sha256"
 
       - name: Upload debug APK
@@ -160,11 +177,12 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload CI release AAB
+      - name: Upload CI release validation
         uses: actions/upload-artifact@v4
         with:
-          name: daro-ta-key-ci-release-aab
+          name: daro-ta-key-ci-release-validation
           path: |
+            build/app/outputs/flutter-apk/app-release.apk.sha256
             build/app/outputs/bundle/release/app-release.aab
             build/app/outputs/bundle/release/app-release.aab.sha256
           if-no-files-found: error
