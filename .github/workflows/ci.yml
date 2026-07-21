@@ -1,49 +1,128 @@
-name: Step 6 Test Diagnostics
+name: Step 6 Test Finalizer
 
 on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  test-diagnostics:
+  finalize-tests:
     if: github.head_ref == 'agent/error-recovery-flows'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
 
     steps:
-      - name: Checkout
+      - name: Checkout source branch
         uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.44.6
-          channel: stable
-          cache: true
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
 
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Generate Drift code
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Capture complete test output
-        shell: bash
+      - name: Make retained-field tests viewport deterministic
         run: |
-          set +e
-          flutter test --coverage 2>&1 | tee step6-test-output.txt
-          status=${PIPESTATUS[0]}
-          echo "$status" > step6-test-exit-status.txt
-          exit 0
+          python3 - <<'PY'
+          from pathlib import Path
 
-      - name: Upload test diagnostics
-        uses: actions/upload-artifact@v4
-        with:
-          name: step6-test-diagnostics
-          path: |
-            step6-test-output.txt
-            step6-test-exit-status.txt
-          if-no-files-found: error
-          retention-days: 1
+          path = Path('test/features/medication_inventory/presentation/error_recovery_widget_test.dart')
+          text = path.read_text()
+
+          first_old = """    expect(_fieldText(tester, name), 'متفورمین آزمایشی');
+              expect(_fieldText(tester, stock), '۲۴');
+              expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+          """
+          first_new = """    expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+              await _scrollTo(tester, name);
+              expect(_fieldText(tester, name), 'متفورمین آزمایشی');
+              expect(_fieldText(tester, stock), '۲۴');
+          """
+          second_old = """    expect(_fieldText(tester, name), 'نام ویرایش‌شده');
+              expect((await repository.findById(medication.id))!.name, medication.name);
+              expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+          """
+          second_new = """    expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+              await _scrollTo(tester, name);
+              expect(_fieldText(tester, name), 'نام ویرایش‌شده');
+              expect((await repository.findById(medication.id))!.name, medication.name);
+          """
+
+          if text.count(first_old) != 1 or text.count(second_old) != 1:
+              raise SystemExit('Expected test blocks were not found exactly once')
+          text = text.replace(first_old, first_new).replace(second_old, second_new)
+          path.write_text(text)
+          PY
+
+      - name: Restore strict CI
+        run: |
+          cat > .github/workflows/ci.yml <<'YAML'
+          name: Flutter CI
+
+          on:
+            push:
+              branches: [main]
+            pull_request:
+
+          permissions:
+            contents: read
+
+          jobs:
+            validate:
+              runs-on: ubuntu-latest
+              timeout-minutes: 35
+
+              steps:
+                - name: Checkout
+                  uses: actions/checkout@v4
+
+                - name: Set up Flutter
+                  uses: subosito/flutter-action@v2
+                  with:
+                    flutter-version: 3.44.6
+                    channel: stable
+                    cache: true
+
+                - name: Verify committed Android platform
+                  run: test -f android/app/build.gradle.kts
+
+                - name: Install dependencies
+                  run: flutter pub get
+
+                - name: Generate Drift code
+                  run: dart run build_runner build --delete-conflicting-outputs
+
+                - name: Verify Drift schema snapshot
+                  run: |
+                    rm -rf /tmp/daro_drift_schemas
+                    bash tool/export_drift_schema.sh /tmp/daro_drift_schemas
+                    test -f drift_schemas/drift_schema_v1.json
+                    diff -u drift_schemas/drift_schema_v2.json /tmp/daro_drift_schemas/drift_schema_v2.json
+
+                - name: Verify formatting
+                  run: dart format --output=none --set-exit-if-changed lib test
+
+                - name: Analyze
+                  run: flutter analyze
+
+                - name: Test
+                  run: flutter test --coverage
+
+                - name: Build debug APK
+                  run: flutter build apk --debug
+
+                - name: Upload debug APK
+                  uses: actions/upload-artifact@v4
+                  with:
+                    name: daro-ta-key-debug-apk
+                    path: build/app/outputs/flutter-apk/app-debug.apk
+                    if-no-files-found: error
+                    retention-days: 7
+          YAML
+
+      - name: Commit deterministic tests
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'test: scroll to retained fields after failed commands'
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
