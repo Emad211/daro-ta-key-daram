@@ -6,7 +6,7 @@
 
 ## وضعیت پروژه
 
-**مرحله فعلی: Phase 5 — release engineering و آماده‌سازی تست دستگاه**
+**مرحله فعلی: Phase 5 — حریم خصوصی، release engineering و آماده‌سازی تست دستگاه**
 
 موارد اصلی پیاده‌سازی‌شده:
 
@@ -24,6 +24,7 @@
 - Android project متعهدشده با application ID `ir.emadkarimi.darutakey`
 - تست خودکار RTL و متن بزرگ در مقیاس‌های ۱٫۰، ۱٫۳ و ۲٫۰
 - release signing صریح بدون fallback به کلید debug
+- privacy center فارسی و حذف اتمیک همه اطلاعات دارویی محلی
 - CI شامل code generation، schema parity، format، analyze، test، debug APK و release AAB validation
 
 ## مدل کسب‌وکار
@@ -76,6 +77,26 @@ CI نیز APK را با نام `daro-ta-key-debug-apk` برای هفت روز ن
 
 CI یک AAB با کلید موقت تولید می‌کند تا مسیر release را اعتبارسنجی کند. این artifact برای store upload نیست. AAB کاندید انتشار فقط از workflow دستی **Android Signed Release** و کلید دائمی مالک پروژه ساخته می‌شود.
 
+## حریم خصوصی و حذف داده
+
+نسخه فعلی اطلاعات دارویی را داخل پایگاه داده محلی همان دستگاه نگهداری می‌کند و حساب کاربری یا همگام‌سازی ابری برای اطلاعات دارویی ندارد.
+
+privacy center داخل برنامه موارد زیر را توضیح می‌دهد:
+
+- دامنه اطلاعات دارویی محلی؛
+- مرز ایمنی پزشکی؛
+- اختیاری‌بودن اعلان‌ها؛
+- مرز داده‌های تبلیغاتی و سرویس‌های ثالث؛
+- حذف دائمی همه داروهای فعال و آرشیوشده و تاریخچه وابسته.
+
+حذف همه اطلاعات دارویی در یک transaction دیتابیس انجام می‌شود. سپس برنامه اعلان‌های خودش را پاک می‌کند. شکست پاک‌سازی اعلان‌ها موجب ادعای rollback داده‌های حذف‌شده نمی‌شود و یک مسیر retry جداگانه دارد.
+
+پیش‌نویس سیاست عمومی فارسی:
+
+[`docs/09-privacy-policy-fa.md`](docs/09-privacy-policy-fa.md)
+
+این سند پیش از انتشار باید با مشخصات حقوقی ناشر، ایمیل معتبر، URL عمومی HTTPS و فهرست نهایی SDKها تکمیل شود.
+
 ## اعلان‌ها
 
 - درخواست permission فقط با لمس دکمه یادآوری انجام می‌شود.
@@ -112,6 +133,7 @@ lib/
     ads/
     medication_inventory/
     notifications/
+    privacy/
 android/
 drift_schemas/
 test/
@@ -120,13 +142,14 @@ test/
 ## قواعد محصول
 
 1. هیچ داده دارویی در MVP به سرور ارسال نمی‌شود.
-2. هیچ تبلیغی روی فرم، lifecycle، permission یا notification flow نمایش داده نمی‌شود.
+2. هیچ تبلیغی روی فرم، lifecycle، permission، privacy یا notification flow نمایش داده نمی‌شود.
 3. اپ دوز مصرف را پیشنهاد یا تغییر نمی‌دهد.
 4. قابلیت‌های اصلی پشت تبلیغ قفل نمی‌شوند.
 5. notification failure موجب rollback داده دارویی نمی‌شود.
 6. تغییر schema بدون snapshot و migration معتبر وارد `main` نمی‌شود.
 7. خرید مجدد به‌عنوان موجودی کل جدید ثبت می‌شود.
 8. release بدون signing material معتبر تولید نمی‌شود و هرگز به debug signing برنمی‌گردد.
+9. فرمان «حذف همه اطلاعات دارویی» فقط دامنه دارویی برنامه را پاک می‌کند و درباره داده Android، فروشگاه یا سرویس ثالث ادعای نادرست ندارد.
 
 ## اسناد مهندسی
 
@@ -137,9 +160,10 @@ test/
 - [حریم خصوصی و ایمنی](docs/04-privacy-safety.md)
 - [نقشه راه](docs/05-roadmap.md)
 - [طراحی persistence](docs/06-persistence-design.md)
+- [ماتریس تست دسترس‌پذیری](docs/06-accessibility-test-matrix.md)
 - [معماری اعلان‌ها](docs/07-notifications.md)
 - [راهنمای Android release signing](docs/08-android-release-signing.md)
-- [ماتریس تست دسترس‌پذیری](docs/06-accessibility-test-matrix.md)
+- [پیش‌نویس سیاست حریم خصوصی فارسی](docs/09-privacy-policy-fa.md)
 - [تصمیم‌های معماری](docs/adr/)
 
 ## نام و شناسه

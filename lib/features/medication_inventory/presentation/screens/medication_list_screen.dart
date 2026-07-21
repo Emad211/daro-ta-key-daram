@@ -34,6 +34,19 @@ class MedicationListScreen extends ConsumerWidget {
         actions: <Widget>[
           Semantics(
             container: true,
+            label: 'حریم خصوصی و مدیریت داده‌ها',
+            button: true,
+            enabled: true,
+            onTap: () => context.goNamed('privacy-center'),
+            excludeSemantics: true,
+            child: IconButton(
+              tooltip: 'حریم خصوصی و مدیریت داده‌ها',
+              onPressed: () => context.goNamed('privacy-center'),
+              icon: const Icon(Icons.privacy_tip_outlined),
+            ),
+          ),
+          Semantics(
+            container: true,
             label: 'مدیریت آرشیو',
             button: true,
             enabled: true,

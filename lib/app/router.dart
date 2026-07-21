@@ -6,6 +6,7 @@ import '../features/medication_inventory/presentation/screens/archived_medicatio
 import '../features/medication_inventory/presentation/screens/edit_medication_screen.dart';
 import '../features/medication_inventory/presentation/screens/medication_details_screen.dart';
 import '../features/medication_inventory/presentation/screens/medication_list_screen.dart';
+import '../features/privacy/presentation/privacy_center_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -29,6 +30,13 @@ final GoRouter appRouter = GoRouter(
           name: 'archived-medications',
           builder: (BuildContext context, GoRouterState state) {
             return const ArchivedMedicationsScreen();
+          },
+        ),
+        GoRoute(
+          path: 'privacy',
+          name: 'privacy-center',
+          builder: (BuildContext context, GoRouterState state) {
+            return const PrivacyCenterScreen();
           },
         ),
         GoRoute(

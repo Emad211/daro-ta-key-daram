@@ -53,6 +53,15 @@ final class NotificationSyncCoordinator {
     }
   }
 
+  Future<bool> cancelAll() async {
+    try {
+      await _notificationService.cancelAll();
+      return true;
+    } on Object {
+      return false;
+    }
+  }
+
   Future<int> rebuildAll() async {
     final List<Medication> medications = await _medicationRepository
         .watchActiveMedications()

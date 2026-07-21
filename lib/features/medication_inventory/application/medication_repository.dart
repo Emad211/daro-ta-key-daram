@@ -22,4 +22,6 @@ abstract interface class MedicationRepository {
   Future<void> restore(String medicationId);
 
   Future<void> deletePermanently(String medicationId);
+
+  Future<void> deleteAll();
 }

@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Privacy controls and physical-device verification before closed beta.
+Physical-device verification, permanent release key setup, and closed-beta preparation.
 
 ## Completed on `main`
 
@@ -16,24 +16,32 @@ Privacy controls and physical-device verification before closed beta.
 - [x] Typed create, details, quantity, archive, restore, and delete repository commands
 - [x] Explicit active / archived / missing lifecycle state machine
 - [x] Typed Persian command failures, retained form state, duplicate-submit guards, quantity review, schedule confirmation, and archive undo
-- [x] Cancelled and rejected write commands proven to have no persisted aggregate or history side effects
-- [x] Stable notification IDs, permission flow, scheduling, replacement, cancellation, deep links, reboot persistence, and timezone fallback
-- [x] Android project with application ID `ir.emadkarimi.darutakey`
+- [x] Stable notification scheduling, cancellation, deep links, reboot persistence, and timezone fallback
 - [x] Automated Persian RTL and large-text coverage at scales 1.0, 1.3, and 2.0
-- [x] Strict CI for code generation, schema parity, formatting, analyzer, tests, debug APK build, and artifact upload
+- [x] Android release signing without debug fallback, disposable-key AAB validation, and secret-backed manual release workflow
 
-## Validated for merge in PR `#25`
+## Validated for merge in PR `#27`
 
-- Android release builds never fall back to debug signing.
-- Release tasks fail explicitly when signing material is missing.
-- Local ignored `android/key.properties` signing is validated.
-- Step-scoped environment signing used by the manual release workflow is validated.
-- Signing files and private-key formats are rejected from Git tracking.
-- Strict Flutter CI run `#309` passed the full source suite, debug APK, release AAB build, JAR signature verification, SHA-256 checksum generation, artifact upload, and signing-material cleanup.
-- The manual **Android Signed Release** workflow validates secrets and version inputs, reconstructs the upload keystore only inside the runner, and removes it after the run.
-- A local release command performs the same source, signing, AAB, signature, and checksum checks.
+- Persian privacy/about center accessible from the dashboard with explicit semantics.
+- Clear disclosure of current local medication storage, medical non-goals, notifications, and future third-party advertising boundaries.
+- One typed `deleteAll` repository command shared by Drift and in-memory implementations.
+- Drift transaction removes active and archived medication aggregate roots; inventory history follows by enforced foreign-key cascade.
+- Unrelated application preferences remain outside medication-domain erasure.
+- Dedicated application service performs persistence erasure before notification cleanup.
+- Typed result distinguishes complete success from pending notification cleanup.
+- Failed notification cleanup never implies database rollback and supports retry without re-deleting data.
+- Cancelling the destructive dialog produces no persistence or notification side effects.
+- Duplicate destructive submissions are disabled.
+- Privacy and destructive controls pass the narrow 360×640 Persian RTL matrix at text scales 1.0, 1.3, and 2.0.
+- Public-facing Persian privacy-policy draft includes explicit publisher/contact/HTTPS/SDK placeholders.
+- Strict Flutter CI run `#345` passed schema parity, formatting, analyzer, the complete regression suite, debug APK, disposable-key release AAB, signature/checksum validation, artifact upload, and signing-material cleanup.
 
-The downloaded CI AAB is signed by a disposable key and is **not** a store-candidate artifact.
+## Build artifacts from validation
+
+- Debug APK artifact digest: `sha256:345dd73f65bba583ac8b46552185a85b184136e9b914c74504e9f9dec289ff5c`
+- CI release AAB artifact digest: `sha256:599e9f083d3335567120a1af315d8f3e6d2f33488cd500ec3f33538105f6adce`
+
+The CI AAB is signed by a disposable key and must not be uploaded to a store.
 
 ## Maintainer-owned release material still required
 
@@ -41,11 +49,13 @@ The downloaded CI AAB is signed by a disposable key and is **not** a store-candi
 - Store at least two encrypted backups and record the certificate SHA-256 fingerprint.
 - Configure the four GitHub repository secrets described in `docs/08-android-release-signing.md`.
 - Run the manual **Android Signed Release** workflow to produce the first store-candidate AAB.
-- Confirm the signing/update-key rules of each target store before first publication.
 
-## Current next increment
+## Publication material still required
 
-Issue `#26` tracks a Persian privacy center and one atomic command for deleting all local medication data, history, and related notifications.
+- Replace every placeholder in `docs/09-privacy-policy-fa.md`.
+- Publish the final policy at a stable HTTPS URL.
+- Verify the final permission and SDK inventory against the release build.
+- Complete store-specific Data Safety and metadata.
 
 ## Device-only work still required
 
@@ -56,16 +66,15 @@ Issue `#26` tracks a Persian privacy center and one atomic command for deleting 
 
 ## Next engineering increments
 
-1. Merge PR `#25` after the final documentation CI run.
-2. Implement Issue `#26` for privacy controls and atomic local-data deletion.
-3. Run physical-device notification and accessibility verification.
+1. Merge PR `#27` after the final documentation CI run.
+2. Run physical-device notification, installation, upgrade, and accessibility verification.
+3. Create and protect the permanent upload key and produce the first store-candidate AAB.
 4. Integrate Adivery behind `AdService` with the safety caps in Issue `#3`.
-5. Prepare the public privacy policy, store listing, and a 10–20 user closed beta.
+5. Finalize privacy/store metadata and start a 10–20 user closed beta.
 
 ## Repository
 
 - GitHub repository: `Emad211/daro-ta-key-daram`
 - Default branch: `main`
-- Release-signing PR ready for final validation: `#25`
-- Privacy-control issue queued next: `#26`
+- Privacy-control PR ready for final validation: `#27`
 - Repository and strict CI are the source of truth for subsequent engineering work.

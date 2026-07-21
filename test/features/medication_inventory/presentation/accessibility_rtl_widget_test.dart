@@ -42,6 +42,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              rawMedicationRepositoryProvider.overrideWithValue(repository),
               medicationRepositoryProvider.overrideWithValue(repository),
               clockProvider.overrideWithValue(() => now),
               localNotificationServiceProvider.overrideWithValue(
@@ -55,6 +56,10 @@ void main() {
 
         await _openRoute(tester, '/');
         expect(find.text('دارو تا کی دارم؟'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel('حریم خصوصی و مدیریت داده‌ها'),
+          findsOneWidget,
+        );
         expect(find.bySemanticsLabel('مدیریت آرشیو'), findsOneWidget);
         expect(
           find.bySemanticsLabel('فعال‌کردن یادآوری موجودی'),
@@ -109,6 +114,15 @@ void main() {
         expect(find.byKey(Key('restore-${archived.id}')), findsOneWidget);
         expect(find.bySemanticsLabel('حذف دائمی'), findsOneWidget);
         _expectNoFlutterExceptions(tester, 'archive at scale $textScale');
+
+        await _openRoute(tester, '/privacy');
+        expect(find.text('حریم خصوصی و اطلاعات برنامه'), findsOneWidget);
+        final Finder deleteAll = find.byKey(
+          const Key('delete-all-medication-data'),
+        );
+        await _scrollTo(tester, deleteAll);
+        expect(deleteAll, findsOneWidget);
+        _expectNoFlutterExceptions(tester, 'privacy at scale $textScale');
       } finally {
         semantics.dispose();
       }
