@@ -44,6 +44,9 @@
 - [x] پیام خطای typed در UI و حفظ فرم پس از شکست
 - [x] بازبینی قبل از ثبت موجودی و جلوگیری از ارسال تکراری
 - [x] Undo برای آرشیو و تست عدم side effect در لغو/رد فرمان
+- [x] فرمان typed برای حذف همه اطلاعات دارویی محلی
+- [x] حذف اتمیک aggregateها و تاریخچه وابسته
+- [x] outcome جداگانه برای شکست پاک‌سازی اعلان‌ها و retry
 
 ## Phase 3 — Notifications
 
@@ -70,6 +73,7 @@
 
 - [x] automated accessibility audit برای مسیرهای بحرانی
 - [x] RTL and large-font tests در مقیاس‌های ۱٫۰، ۱٫۳ و ۲٫۰
+- [x] privacy center و destructive controls در ماتریس RTL و متن بزرگ
 - [ ] TalkBack، display-size و gesture audit روی دستگاه فیزیکی
 - [ ] integration tests روی دستگاه
 - [x] حذف debug signing از release و fail-fast بدون کلید معتبر
@@ -78,9 +82,11 @@
 - [x] workflow دستی امن برای ساخت AAB با GitHub Secrets
 - [ ] ساخت upload keystore دائمی و backup رمزگذاری‌شده توسط مالک پروژه
 - [ ] تنظیم چهار GitHub Secret و ساخت نخستین AAB کاندید انتشار
-- [ ] privacy center و حذف اتمیک همه داده‌های محلی — Issue `#26`
+- [x] privacy center و حذف اتمیک همه داده‌های محلی — Issue `#26`
+- [x] پیش‌نویس سیاست حریم خصوصی فارسی با placeholderهای انتشار
+- [ ] تکمیل مشخصات ناشر و URL عمومی HTTPS سیاست حریم خصوصی
 - [ ] closed beta با ۱۰ تا ۲۰ کاربر
-- [ ] privacy policy و store listing
+- [ ] store listing و Data Safety نهایی
 - [ ] انتشار در کافه‌بازار و مایکت
 
 ## Phase 6 — Growth
