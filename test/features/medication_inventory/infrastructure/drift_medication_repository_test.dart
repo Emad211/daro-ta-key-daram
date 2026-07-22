@@ -122,6 +122,41 @@ void main() {
       );
     });
 
+    test('rejects an inventory event before the current baseline', () async {
+      await repository.create(_medication(now: now));
+      currentTime = now.add(const Duration(days: 2));
+      await repository.recordInventoryEvent(
+        InventoryEvent(
+          id: 'restock-1',
+          medicationId: 'medication-1',
+          type: InventoryEventType.restock,
+          stockUnits: 60,
+          effectiveAt: currentTime,
+          createdAt: currentTime,
+        ),
+      );
+
+      final Future<void> operation = repository.recordInventoryEvent(
+        InventoryEvent(
+          id: 'stale-correction',
+          medicationId: 'medication-1',
+          type: InventoryEventType.correction,
+          stockUnits: 12,
+          effectiveAt: currentTime.subtract(const Duration(seconds: 1)),
+          createdAt: currentTime,
+        ),
+      );
+
+      await expectLater(operation, throwsArgumentError);
+      final Medication? stored = await repository.findById('medication-1');
+      expect(stored?.stockAtRecord, 60);
+      expect(stored?.inventoryRecordedAt.toUtc(), currentTime);
+      expect(
+        await database.select(database.inventoryEvents).get(),
+        hasLength(2),
+      );
+    });
+
     test('archive hides an aggregate and restore makes it active', () async {
       await repository.create(_medication(now: now));
 

@@ -84,20 +84,38 @@ flutter test
 args=(--release)
 [[ -z "$build_name" ]] || args+=(--build-name "$build_name")
 [[ -z "$build_number" ]] || args+=(--build-number "$build_number")
-flutter build apk "${args[@]}"
-flutter build appbundle "${args[@]}"
 
-apk="build/app/outputs/flutter-apk/app-release.apk"
-bundle="build/app/outputs/bundle/release/app-release.aab"
-test -f "$apk"
+output="build/app/outputs/internal-release"
+mkdir -p "$output"
+
+flutter build apk "${args[@]}"
+cp build/app/outputs/flutter-apk/app-release.apk \
+  "$output/daro-ta-key-universal-release.apk"
+
+flutter build apk "${args[@]}" --split-per-abi
+cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+  "$output/daro-ta-key-arm64-release.apk"
+
+flutter build appbundle "${args[@]}"
+cp build/app/outputs/bundle/release/app-release.aab \
+  "$output/daro-ta-key-store-candidate.aab"
+
+universal="$output/daro-ta-key-universal-release.apk"
+arm64="$output/daro-ta-key-arm64-release.apk"
+bundle="$output/daro-ta-key-store-candidate.aab"
+test -f "$universal"
+test -f "$arm64"
 test -f "$bundle"
 
-apk_signature_log="$(mktemp)"
+universal_signature_log="$(mktemp)"
+arm64_signature_log="$(mktemp)"
 aab_signature_log="$(mktemp)"
-trap 'rm -f "$apk_signature_log" "$aab_signature_log"' EXIT
+trap 'rm -f "$universal_signature_log" "$arm64_signature_log" "$aab_signature_log"' EXIT
 
-"$apksigner" verify --verbose --print-certs "$apk" | tee "$apk_signature_log"
-grep -Eq 'Verified using v2 scheme.*: true|Verified using v3 scheme.*: true' "$apk_signature_log"
+"$apksigner" verify --verbose --print-certs "$universal" | tee "$universal_signature_log"
+"$apksigner" verify --verbose --print-certs "$arm64" | tee "$arm64_signature_log"
+grep -Eq 'Verified using v2 scheme.*: true|Verified using v3 scheme.*: true' "$universal_signature_log"
+grep -Eq 'Verified using v2 scheme.*: true|Verified using v3 scheme.*: true' "$arm64_signature_log"
 
 jarsigner -verify -verbose -certs "$bundle" | tee "$aab_signature_log"
 grep -F 'jar verified.' "$aab_signature_log" >/dev/null
@@ -114,11 +132,47 @@ checksum() {
   fi
 }
 
-checksum "$apk"
+checksum "$universal"
+checksum "$arm64"
 checksum "$bundle"
 
-printf '\nSigned Android internal APK created successfully:\n%s\n' "$apk"
-printf 'APK checksum:\n%s.sha256\n' "$apk"
-printf '\nSigned Android App Bundle created successfully:\n%s\n' "$bundle"
-printf 'AAB checksum:\n%s.sha256\n' "$bundle"
-printf '\nInstall the APK with Android Package Installer. Do not use SAI for this single APK.\n'
+file_size() {
+  local target="$1"
+  if stat -c%s "$target" >/dev/null 2>&1; then
+    stat -c%s "$target"
+  else
+    stat -f%z "$target"
+  fi
+}
+
+universal_bytes="$(file_size "$universal")"
+arm64_bytes="$(file_size "$arm64")"
+bundle_bytes="$(file_size "$bundle")"
+universal_limit=$((61 * 1024 * 1024))
+arm64_limit=$((22 * 1024 * 1024))
+
+if (( universal_bytes > universal_limit )); then
+  echo "Universal release APK exceeds the 61 MiB measured budget: $universal_bytes bytes." >&2
+  exit 1
+fi
+if (( arm64_bytes > arm64_limit )); then
+  echo "Arm64 release APK exceeds the 22 MiB measured budget: $arm64_bytes bytes." >&2
+  exit 1
+fi
+
+cat > "$output/BUILD-METADATA.txt" <<EOF
+Product: Daro Ta Key Daram
+Application ID: ir.emadkarimi.darutakey
+Pubspec version: $(awk '/^version:/{print $2; exit}' pubspec.yaml)
+Universal APK bytes: $universal_bytes
+Arm64 APK bytes: $arm64_bytes
+AAB bytes: $bundle_bytes
+Universal APK measured limit bytes: $universal_limit
+Arm64 APK measured limit bytes: $arm64_limit
+Recommended physical-device file: daro-ta-key-arm64-release.apk
+EOF
+
+printf '\nSigned universal APK:\n%s\n' "$universal"
+printf 'Signed arm64 APK (recommended for modern devices):\n%s\n' "$arm64"
+printf 'Signed App Bundle:\n%s\n' "$bundle"
+printf '\nInstall an APK with Android Package Installer. Do not use SAI for these single APK files.\n'

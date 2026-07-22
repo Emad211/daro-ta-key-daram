@@ -118,6 +118,23 @@ class InMemoryMedicationRepository implements MedicationRepository {
       MedicationLifecycleOperation.recordInventoryEvent,
     );
 
+    final DateTime now = _clock();
+    if (event.effectiveAt.isAfter(now)) {
+      throw ArgumentError.value(
+        event.effectiveAt,
+        'event.effectiveAt',
+        'Inventory events cannot become effective in the future.',
+      );
+    }
+    final DateTime currentBaseline = _items[index].inventoryRecordedAt;
+    if (event.effectiveAt.isBefore(currentBaseline)) {
+      throw ArgumentError.value(
+        event.effectiveAt,
+        'event.effectiveAt',
+        'Inventory events cannot precede the current inventory baseline.',
+      );
+    }
+
     final List<InventoryEvent> events = _eventsByMedicationId.putIfAbsent(
       event.medicationId,
       () => <InventoryEvent>[],

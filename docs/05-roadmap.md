@@ -47,6 +47,10 @@
 - [x] فرمان typed برای حذف همه اطلاعات دارویی محلی
 - [x] حذف اتمیک aggregateها و تاریخچه وابسته
 - [x] outcome جداگانه برای شکست پاک‌سازی اعلان‌ها و retry
+- [x] جداسازی `createdAt` فرمان از `effectiveAt` انتخابی رویداد موجودی
+- [x] رد تاریخ آینده در UI، service و repositoryها
+- [x] رد رویداد قدیمی‌تر از آخرین baseline در UI، service، Drift و InMemory
+- [x] تست parity و عدم side effect برای مرز زمانی inventory
 
 ## Phase 3 — Notifications
 
@@ -57,6 +61,7 @@
 - [x] timezone initialization و fallback
 - [x] notification deep links
 - [x] committed Android project و debug APK build
+- [x] آغاز initialization اختیاری اعلان‌ها پس از first frame
 - [ ] تست روی دستگاه فیزیکی Android
 
 ## Phase 4 — Monetization integration
@@ -74,6 +79,9 @@
 - [x] automated accessibility audit برای مسیرهای بحرانی
 - [x] RTL and large-font tests در مقیاس‌های ۱٫۰، ۱٫۳ و ۲٫۰
 - [x] privacy center و destructive controls در ماتریس RTL و متن بزرگ
+- [x] formatter مرکزی تاریخ جلالی با ارقام فارسی
+- [x] Persian Material date/time picker برای ثبت اولیه و رویداد موجودی
+- [x] تست field جلالی در عرض ۳۶۰ و text scale 2.0
 - [ ] TalkBack، display-size و gesture audit روی دستگاه فیزیکی
 - [ ] integration tests روی دستگاه
 - [x] حذف debug signing از release و fail-fast بدون کلید معتبر
@@ -84,6 +92,15 @@
 - [x] workflow دستی برای APK نصب‌شدنی و AAB با یک signing identity
 - [x] checksum، build metadata و راهنمای نصب بدون SAI
 - [x] runbook نصب، clean install، upgrade، اعلان، privacy و TalkBack
+- [x] قرارداد ساخت universal و arm64 release APK
+- [x] نگهداری خود APKهای release در artifact به‌جای checksum تنها
+- [x] اندازه‌گیری واقعی: arm64 برابر ۲۰٫۷۹ MiB و universal برابر ۶۰٫۱۳ MiB
+- [x] breakdown فایل arm64: Flutter ۱۱٫۰۵، AOT app ۷٫۳۱ و SQLite ۱٫۶۵ MiB
+- [x] budget مبتنی بر evidence: سقف ۶۱ MiB universal و ۲۲ MiB arm64
+- [ ] نصب arm64 release APK و مقایسه cold/warm startup با debug
+- [ ] ثبت first usable dashboard و first tap response روی دستگاه نام‌دار
+- [ ] بررسی `--analyze-size` برای رشد آینده `libapp.so`
+- [ ] کاهش arm64 به زیر ۲۰ MiB فقط با بهینه‌سازی اندازه‌گیری‌شده و امن
 - [ ] ساخت upload keystore دائمی و backup رمزگذاری‌شده توسط مالک پروژه
 - [ ] تنظیم چهار GitHub Secret و ساخت نخستین APK/AAB دائمی
 - [ ] نصب clean روی دستگاه فیزیکی با Package Installer

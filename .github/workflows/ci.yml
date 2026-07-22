@@ -11,7 +11,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 65
 
     steps:
       - name: Checkout
@@ -52,6 +52,7 @@ jobs:
           bash -n tool/export_drift_schema.sh
           bash -n tool/build_signed_android_release.sh
           grep -F 'flutter build apk' .github/workflows/android-release.yml
+          grep -F -- '--split-per-abi' .github/workflows/android-release.yml
           grep -F 'flutter build appbundle' .github/workflows/android-release.yml
           grep -F 'apksigner' .github/workflows/android-release.yml
           grep -F 'INSTALL-APK-FA.txt' .github/workflows/android-release.yml
@@ -143,31 +144,87 @@ jobs:
       - name: Verify environment-backed release signing
         run: cd android && ./gradlew :app:verifyReleaseSigning
 
-      - name: Build ephemeral signed release APK and AAB
-        run: |
-          flutter build apk --release
-          flutter build appbundle --release
-
-      - name: Verify release APK and AAB signatures
+      - name: Build ephemeral universal, arm64, and AAB releases
         shell: bash
         run: |
           set -euo pipefail
-          apk=build/app/outputs/flutter-apk/app-release.apk
-          bundle=build/app/outputs/bundle/release/app-release.aab
-          test -f "$apk"
+          output=build/app/outputs/release-validation
+          mkdir -p "$output"
+
+          flutter build apk --release
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "$output/daro-ta-key-universal-release.apk"
+
+          flutter build apk --release --split-per-abi
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+            "$output/daro-ta-key-arm64-release.apk"
+
+          flutter build appbundle --release
+          cp build/app/outputs/bundle/release/app-release.aab \
+            "$output/daro-ta-key-release.aab"
+
+      - name: Verify signatures and record measured release sizes
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=build/app/outputs/release-validation
+          universal="$output/daro-ta-key-universal-release.apk"
+          arm64="$output/daro-ta-key-arm64-release.apk"
+          bundle="$output/daro-ta-key-release.aab"
+          test -f "$universal"
+          test -f "$arm64"
           test -f "$bundle"
 
           apksigner="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$apksigner"
           test -x "$apksigner"
-          "$apksigner" verify --verbose --print-certs "$apk" | tee /tmp/apk-signature.log
-          grep -Eq 'Verified using v2 scheme.*: true|Verified using v3 scheme.*: true' /tmp/apk-signature.log
+
+          "$apksigner" verify --verbose --print-certs "$universal" | tee /tmp/universal-apk-signature.log
+          "$apksigner" verify --verbose --print-certs "$arm64" | tee /tmp/arm64-apk-signature.log
+          grep -Eq 'Verified using v2 scheme.*: true|Verified using v3 scheme.*: true' /tmp/universal-apk-signature.log
+          grep -Eq 'Verified using v2 scheme.*: true|Verified using v3 scheme.*: true' /tmp/arm64-apk-signature.log
 
           jarsigner -verify -verbose -certs "$bundle" | tee /tmp/aab-signature.log
           grep -F 'jar verified.' /tmp/aab-signature.log
 
-          sha256sum "$apk" > "$apk.sha256"
+          sha256sum "$universal" > "$universal.sha256"
+          sha256sum "$arm64" > "$arm64.sha256"
           sha256sum "$bundle" > "$bundle.sha256"
+
+          universal_bytes="$(stat -c%s "$universal")"
+          arm64_bytes="$(stat -c%s "$arm64")"
+          bundle_bytes="$(stat -c%s "$bundle")"
+          universal_limit=$((61 * 1024 * 1024))
+          arm64_limit=$((22 * 1024 * 1024))
+
+          cat > "$output/BUILD-METADATA.txt" <<EOF
+          Product: Daro Ta Key Daram
+          Application ID: ir.emadkarimi.darutakey
+          Commit: $GITHUB_SHA
+          Workflow run: $GITHUB_RUN_NUMBER
+          Signing identity: disposable CI validation key
+          Universal APK bytes: $universal_bytes
+          Arm64 APK bytes: $arm64_bytes
+          AAB bytes: $bundle_bytes
+          Universal APK measured limit bytes: $universal_limit
+          Arm64 APK measured limit bytes: $arm64_limit
+          Performance conclusion: use release/profile on a physical device; debug is excluded
+          Store/upload continuity: NOT ESTABLISHED by this disposable-key artifact
+          EOF
+
+          {
+            echo '## Android release size evidence'
+            echo
+            echo '| Artifact | Bytes | MiB | Measured limit |'
+            echo '|---|---:|---:|---:|'
+            awk -v bytes="$universal_bytes" -v limit="$universal_limit" 'BEGIN {printf "| Universal APK | %d | %.2f | %.2f MiB |\n", bytes, bytes/1048576, limit/1048576}'
+            awk -v bytes="$arm64_bytes" -v limit="$arm64_limit" 'BEGIN {printf "| Arm64 APK | %d | %.2f | %.2f MiB |\n", bytes, bytes/1048576, limit/1048576}'
+            awk -v bytes="$bundle_bytes" 'BEGIN {printf "| AAB | %d | %.2f | n/a |\n", bytes, bytes/1048576}'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          printf 'Universal APK: %s bytes\n' "$universal_bytes"
+          printf 'Arm64 APK: %s bytes\n' "$arm64_bytes"
+          printf 'AAB: %s bytes\n' "$bundle_bytes"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -177,16 +234,25 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload CI release validation
+      - name: Upload measured CI release validation
         uses: actions/upload-artifact@v4
         with:
           name: daro-ta-key-ci-release-validation
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk.sha256
-            build/app/outputs/bundle/release/app-release.aab
-            build/app/outputs/bundle/release/app-release.aab.sha256
+          path: build/app/outputs/release-validation/
           if-no-files-found: error
           retention-days: 7
+
+      - name: Enforce measured release size budgets
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=build/app/outputs/release-validation
+          universal_bytes="$(stat -c%s "$output/daro-ta-key-universal-release.apk")"
+          arm64_bytes="$(stat -c%s "$output/daro-ta-key-arm64-release.apk")"
+          universal_limit=$((61 * 1024 * 1024))
+          arm64_limit=$((22 * 1024 * 1024))
+          test "$universal_bytes" -le "$universal_limit"
+          test "$arm64_bytes" -le "$arm64_limit"
 
       - name: Remove ephemeral signing material
         if: always()
