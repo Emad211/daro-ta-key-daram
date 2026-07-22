@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/date/persian_date_formatter.dart';
 import '../../domain/consumption_schedule_formatter.dart';
 import '../../domain/medication.dart';
 import '../../domain/medication_stock_snapshot.dart';
@@ -123,7 +124,7 @@ class MedicationCard extends StatelessWidget {
                   Expanded(
                     child: _Metric(
                       label: 'اتمام تقریبی',
-                      value: _date(snapshot.depletionAt),
+                      value: PersianDateFormatter.date(snapshot.depletionAt),
                     ),
                   ),
                   if (onTap != null) const Icon(Icons.chevron_left, size: 22),
@@ -134,11 +135,6 @@ class MedicationCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  static String _date(DateTime date) {
-    return '${date.year}/${date.month.toString().padLeft(2, '0')}/'
-        '${date.day.toString().padLeft(2, '0')}';
   }
 
   static String _displayNumber(double value) {
