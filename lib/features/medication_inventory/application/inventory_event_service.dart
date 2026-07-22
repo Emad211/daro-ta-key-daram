@@ -15,6 +15,7 @@ final class InventoryEventService {
     required String medicationId,
     required InventoryEventType type,
     required double stockUnits,
+    DateTime? effectiveAt,
     String? note,
   }) async {
     if (type == InventoryEventType.initial) {
@@ -26,13 +27,22 @@ final class InventoryEventService {
     }
 
     final DateTime now = _clock();
+    final DateTime selectedEffectiveAt = effectiveAt ?? now;
+    if (selectedEffectiveAt.isAfter(now)) {
+      throw ArgumentError.value(
+        effectiveAt,
+        'effectiveAt',
+        'Inventory events cannot become effective in the future.',
+      );
+    }
+
     await _repository.recordInventoryEvent(
       InventoryEvent(
         id: _uuid.v4(),
         medicationId: medicationId,
         type: type,
         stockUnits: stockUnits,
-        effectiveAt: now,
+        effectiveAt: selectedEffectiveAt,
         createdAt: now,
         note: note,
       ),
