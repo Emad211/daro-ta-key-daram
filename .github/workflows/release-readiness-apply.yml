@@ -1,0 +1,218 @@
+name: Apply Release 1.0 Hardening
+
+on:
+  push:
+    branches:
+      - agent/release-readiness-1.0
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/release-readiness-1.0
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Apply release hardening
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          def read(path: str) -> str:
+              return Path(path).read_text(encoding='utf-8')
+
+          def write(path: str, value: str) -> None:
+              Path(path).write_text(value, encoding='utf-8')
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              value = read(path)
+              count = value.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one marker, found {count}')
+              write(path, value.replace(old, new, 1))
+
+          pubspec_path = 'pubspec.yaml'
+          pubspec = read(pubspec_path)
+          pubspec, count = re.subn(
+              r'^version:\s*[^\n]+$',
+              'version: 1.0.0+1',
+              pubspec,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          if count != 1:
+              raise SystemExit('pubspec version marker was not found')
+          write(pubspec_path, pubspec)
+
+          app_path = 'lib/app/app.dart'
+          app = read(app_path)
+          app, count = re.subn(
+              r"supportedLocales:\s*const <Locale>\[[^\]]*\],",
+              "supportedLocales: const <Locale>[Locale('fa')],",
+              app,
+              count=1,
+              flags=re.DOTALL,
+          )
+          if count != 1:
+              raise SystemExit('supportedLocales marker was not found')
+          write(app_path, app)
+
+          manifest_path = 'android/app/src/main/AndroidManifest.xml'
+          manifest = read(manifest_path)
+          match = re.search(r'<application\b(?P<attrs>[^>]*)>', manifest, re.DOTALL)
+          if match is None:
+              raise SystemExit('Android application element was not found')
+          attrs = match.group('attrs')
+          required = {
+              'allowBackup': 'false',
+              'fullBackupContent': '@xml/backup_rules',
+              'dataExtractionRules': '@xml/data_extraction_rules',
+              'usesCleartextTraffic': 'false',
+              'localeConfig': '@xml/locales_config',
+              'supportsRtl': 'true',
+          }
+          for name, value in required.items():
+              pattern = rf'\s+android:{name}="[^"]*"'
+              attrs, replacements = re.subn(
+                  pattern,
+                  f'\n        android:{name}="{value}"',
+                  attrs,
+                  count=1,
+              )
+              if replacements == 0:
+                  attrs += f'\n        android:{name}="{value}"'
+          updated_application = '<application' + attrs + '>'
+          manifest = manifest[:match.start()] + updated_application + manifest[match.end():]
+          write(manifest_path, manifest)
+
+          locales_path = 'android/app/src/main/res/xml/locales_config.xml'
+          locales = read(locales_path)
+          locales = re.sub(r'\s*<locale android:name="en"\s*/>\s*', '\n', locales)
+          if 'android:name="fa"' not in locales:
+              raise SystemExit('Persian locale is missing')
+          write(locales_path, locales)
+
+          gradle_path = 'android/app/build.gradle.kts'
+          gradle = read(gradle_path)
+          if 'isMinifyEnabled = true' not in gradle:
+              marker = '''        release {
+            if (releaseSigningConfigured) {
+'''
+              replacement = '''        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            if (releaseSigningConfigured) {
+'''
+              if marker not in gradle:
+                  raise SystemExit('Android release build marker was not found')
+              gradle = gradle.replace(marker, replacement, 1)
+          write(gradle_path, gradle)
+
+          privacy_path = 'lib/features/privacy/presentation/privacy_center_screen.dart'
+          privacy = read(privacy_path)
+          if 'class _OpenSourceLicensesCard' not in privacy:
+              marker = '''          const _AdvertisingBoundaryCard(),
+          const SizedBox(height: 18),
+          _DataDeletionCard(
+'''
+              replacement = '''          const _AdvertisingBoundaryCard(),
+          const SizedBox(height: 12),
+          const _OpenSourceLicensesCard(),
+          const SizedBox(height: 18),
+          _DataDeletionCard(
+'''
+              if marker not in privacy:
+                  raise SystemExit('Privacy card insertion marker was not found')
+              privacy = privacy.replace(marker, replacement, 1)
+              class_marker = 'class _DataDeletionCard extends StatelessWidget {'
+              license_card = '''class _OpenSourceLicensesCard extends StatelessWidget {
+  const _OpenSourceLicensesCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        leading: Icon(
+          Icons.description_outlined,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        title: const Text(
+          'مجوزهای متن‌باز',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        subtitle: const Text(
+          'فهرست کتابخانه‌ها و متن مجوزهای استفاده‌شده در برنامه',
+        ),
+        trailing: const Icon(Icons.chevron_left),
+        onTap: () {
+          showLicensePage(
+            context: context,
+            applicationName: 'دارو تا کی دارم؟',
+            applicationVersion: '۱.۰.۰',
+            applicationLegalese: 'Copyright © ۲۰۲۶',
+          );
+        },
+      ),
+    );
+  }
+}
+
+'''
+              if class_marker not in privacy:
+                  raise SystemExit('Privacy class marker was not found')
+              privacy = privacy.replace(class_marker, license_card + class_marker, 1)
+          write(privacy_path, privacy)
+
+          release_check_path = 'tool/check_release_candidate.py'
+          release_check = read(release_check_path)
+          release_check = release_check.replace(
+              '    ANDROID + "appCategory": "medical",\n',
+              '',
+          )
+          write(release_check_path, release_check)
+
+      - name: Apply canonical formatting
+        run: |
+          dart format \
+            lib/app/app.dart \
+            lib/features/privacy/presentation/privacy_center_screen.dart
+
+      - name: Run static candidate checks
+        run: |
+          python3 -m py_compile tool/check_release_candidate.py
+          python3 tool/check_release_candidate.py
+          bash -n tool/check_apk_permissions.sh
+          bash -n tool/release_readiness.sh
+          git diff --check
+
+      - name: Commit hardening and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/release-readiness-apply.yml
+          git add -A
+          git commit -m 'Prepare Android release 1.0 candidate boundary'
+          git push origin HEAD:agent/release-readiness-1.0
