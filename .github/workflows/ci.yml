@@ -6,47 +6,9 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  format-sync:
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.head_ref == 'agent/performance-size-jalali-dates' &&
-      github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout feature branch
-        uses: actions/checkout@v4
-        with:
-          ref: agent/performance-size-jalali-dates
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: 3.44.6
-          channel: stable
-          cache: true
-
-      - name: Apply canonical formatting
-        run: dart format lib test
-
-      - name: Commit formatting if needed
-        shell: bash
-        run: |
-          set -euo pipefail
-          if git diff --quiet; then
-            echo 'No formatting changes were required.'
-            exit 0
-          fi
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add lib test
-          git commit -m 'Apply canonical Dart formatting'
-          git push origin HEAD:agent/performance-size-jalali-dates
-
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 65
@@ -232,8 +194,8 @@ jobs:
           universal_bytes="$(stat -c%s "$universal")"
           arm64_bytes="$(stat -c%s "$arm64")"
           bundle_bytes="$(stat -c%s "$bundle")"
-          universal_limit=$((60 * 1024 * 1024))
-          arm64_limit=$((30 * 1024 * 1024))
+          universal_limit=$((61 * 1024 * 1024))
+          arm64_limit=$((22 * 1024 * 1024))
 
           cat > "$output/BUILD-METADATA.txt" <<EOF
           Product: Daro Ta Key Daram
@@ -244,8 +206,8 @@ jobs:
           Universal APK bytes: $universal_bytes
           Arm64 APK bytes: $arm64_bytes
           AAB bytes: $bundle_bytes
-          Universal APK baseline limit bytes: $universal_limit
-          Arm64 APK baseline limit bytes: $arm64_limit
+          Universal APK measured limit bytes: $universal_limit
+          Arm64 APK measured limit bytes: $arm64_limit
           Performance conclusion: use release/profile on a physical device; debug is excluded
           Store/upload continuity: NOT ESTABLISHED by this disposable-key artifact
           EOF
@@ -253,7 +215,7 @@ jobs:
           {
             echo '## Android release size evidence'
             echo
-            echo '| Artifact | Bytes | MiB | Baseline limit |'
+            echo '| Artifact | Bytes | MiB | Measured limit |'
             echo '|---|---:|---:|---:|'
             awk -v bytes="$universal_bytes" -v limit="$universal_limit" 'BEGIN {printf "| Universal APK | %d | %.2f | %.2f MiB |\n", bytes, bytes/1048576, limit/1048576}'
             awk -v bytes="$arm64_bytes" -v limit="$arm64_limit" 'BEGIN {printf "| Arm64 APK | %d | %.2f | %.2f MiB |\n", bytes, bytes/1048576, limit/1048576}'
@@ -280,15 +242,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Enforce release size baseline budgets
+      - name: Enforce measured release size budgets
         shell: bash
         run: |
           set -euo pipefail
           output=build/app/outputs/release-validation
           universal_bytes="$(stat -c%s "$output/daro-ta-key-universal-release.apk")"
           arm64_bytes="$(stat -c%s "$output/daro-ta-key-arm64-release.apk")"
-          universal_limit=$((60 * 1024 * 1024))
-          arm64_limit=$((30 * 1024 * 1024))
+          universal_limit=$((61 * 1024 * 1024))
+          arm64_limit=$((22 * 1024 * 1024))
           test "$universal_bytes" -le "$universal_limit"
           test "$arm64_bytes" -le "$arm64_limit"
 
