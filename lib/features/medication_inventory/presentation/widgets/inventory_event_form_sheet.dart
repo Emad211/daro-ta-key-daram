@@ -126,10 +126,10 @@ class _InventoryEventFormSheetState
                   key: const Key('inventory-effective-at-input'),
                   label: 'تاریخ و زمان اثر موجودی',
                   value: _effectiveAt,
-                  firstDate: DateTime(now.year - 20),
+                  firstDate: widget.medication.inventoryRecordedAt,
                   lastDate: now,
                   helperText:
-                      'برای خرید یا شمارش قبلی می‌توانید زمان گذشته را انتخاب کنید.',
+                      'زمان انتخابی نباید قبل از آخرین مبنای موجودی باشد.',
                   onChanged: (DateTime value) {
                     setState(() => _effectiveAt = value);
                   },
@@ -187,6 +187,16 @@ class _InventoryEventFormSheetState
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('تاریخ رویداد موجودی نمی‌تواند در آینده باشد.'),
+        ),
+      );
+      return;
+    }
+    if (_effectiveAt.isBefore(widget.medication.inventoryRecordedAt)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'تاریخ رویداد نمی‌تواند قبل از آخرین مبنای موجودی باشد.',
+          ),
         ),
       );
       return;
