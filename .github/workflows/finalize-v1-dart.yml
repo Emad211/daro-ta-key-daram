@@ -1,0 +1,49 @@
+name: Finalize V1 Dart Source
+
+on:
+  push:
+    branches:
+      - agent/v1-release-candidate
+
+permissions:
+  contents: write
+
+jobs:
+  finalize-dart:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout source branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/v1-release-candidate
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Apply final locale and license-center patch
+        run: python3 tool/apply_v1_release_consolidation.py
+
+      - name: Apply canonical Dart formatting
+        run: dart format lib test
+
+      - name: Remove one-time finalizer
+        run: |
+          rm -f tool/apply_v1_release_consolidation.py
+          rm -f .github/workflows/finalize-v1-dart.yml
+
+      - name: Commit canonical final source
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'style: finalize Persian v1 source and licenses'
+          git push origin HEAD:agent/v1-release-candidate
