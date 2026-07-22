@@ -1,6 +1,7 @@
 import 'package:uuid/uuid.dart';
 
 import '../domain/inventory_event.dart';
+import '../domain/medication.dart';
 import 'medication_repository.dart';
 
 final class InventoryEventService {
@@ -33,6 +34,16 @@ final class InventoryEventService {
         effectiveAt,
         'effectiveAt',
         'Inventory events cannot become effective in the future.',
+      );
+    }
+
+    final Medication? current = await _repository.findById(medicationId);
+    if (current != null &&
+        selectedEffectiveAt.isBefore(current.inventoryRecordedAt)) {
+      throw ArgumentError.value(
+        effectiveAt,
+        'effectiveAt',
+        'Inventory events cannot precede the current inventory baseline.',
       );
     }
 
