@@ -8,15 +8,26 @@ import '../domain/notification_plan.dart';
 import 'local_notification_service.dart';
 
 final class NotificationSyncCoordinator {
-  NotificationSyncCoordinator({
+  factory NotificationSyncCoordinator({
     required MedicationRepository medicationRepository,
     required LocalNotificationService notificationService,
     required DateTime Function() clock,
     LowStockNotificationPlanner? planner,
-  }) : _medicationRepository = medicationRepository,
-       _notificationService = notificationService,
-       _clock = clock,
-       _planner = planner ?? LowStockNotificationPlanner();
+  }) {
+    return NotificationSyncCoordinator._(
+      medicationRepository,
+      notificationService,
+      clock,
+      planner ?? LowStockNotificationPlanner(),
+    );
+  }
+
+  NotificationSyncCoordinator._(
+    this._medicationRepository,
+    this._notificationService,
+    this._clock,
+    this._planner,
+  );
 
   final MedicationRepository _medicationRepository;
   final LocalNotificationService _notificationService;
