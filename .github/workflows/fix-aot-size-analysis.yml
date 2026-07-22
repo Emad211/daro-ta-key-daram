@@ -1,16 +1,14 @@
 name: Fix AOT Size Analysis
 
 on:
-  push:
-    branches:
-      - agent/v1-release-candidate
+  pull_request:
 
 permissions:
   contents: write
 
 jobs:
   fix-aot-analysis:
-    if: github.actor != 'github-actions[bot]'
+    if: github.head_ref == 'agent/v1-release-candidate'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
