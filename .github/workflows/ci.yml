@@ -163,7 +163,7 @@ jobs:
           cp build/app/outputs/bundle/release/app-release.aab \
             "$output/daro-ta-key-release.aab"
 
-      - name: Verify signatures, sizes, and checksums
+      - name: Verify signatures and record measured release sizes
         shell: bash
         run: |
           set -euo pipefail
@@ -212,11 +212,19 @@ jobs:
           Store/upload continuity: NOT ESTABLISHED by this disposable-key artifact
           EOF
 
+          {
+            echo '## Android release size evidence'
+            echo
+            echo '| Artifact | Bytes | MiB | Baseline limit |'
+            echo '|---|---:|---:|---:|'
+            awk -v bytes="$universal_bytes" -v limit="$universal_limit" 'BEGIN {printf "| Universal APK | %d | %.2f | %.2f MiB |\n", bytes, bytes/1048576, limit/1048576}'
+            awk -v bytes="$arm64_bytes" -v limit="$arm64_limit" 'BEGIN {printf "| Arm64 APK | %d | %.2f | %.2f MiB |\n", bytes, bytes/1048576, limit/1048576}'
+            awk -v bytes="$bundle_bytes" 'BEGIN {printf "| AAB | %d | %.2f | n/a |\n", bytes, bytes/1048576}'
+          } >> "$GITHUB_STEP_SUMMARY"
+
           printf 'Universal APK: %s bytes\n' "$universal_bytes"
           printf 'Arm64 APK: %s bytes\n' "$arm64_bytes"
           printf 'AAB: %s bytes\n' "$bundle_bytes"
-          test "$universal_bytes" -le "$universal_limit"
-          test "$arm64_bytes" -le "$arm64_limit"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -226,13 +234,25 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload CI release validation
+      - name: Upload measured CI release validation
         uses: actions/upload-artifact@v4
         with:
           name: daro-ta-key-ci-release-validation
           path: build/app/outputs/release-validation/
           if-no-files-found: error
           retention-days: 7
+
+      - name: Enforce release size baseline budgets
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=build/app/outputs/release-validation
+          universal_bytes="$(stat -c%s "$output/daro-ta-key-universal-release.apk")"
+          arm64_bytes="$(stat -c%s "$output/daro-ta-key-arm64-release.apk")"
+          universal_limit=$((60 * 1024 * 1024))
+          arm64_limit=$((30 * 1024 * 1024))
+          test "$universal_bytes" -le "$universal_limit"
+          test "$arm64_bytes" -le "$arm64_limit"
 
       - name: Remove ephemeral signing material
         if: always()
