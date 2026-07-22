@@ -47,6 +47,8 @@
 - [x] فرمان typed برای حذف همه اطلاعات دارویی محلی
 - [x] حذف اتمیک aggregateها و تاریخچه وابسته
 - [x] outcome جداگانه برای شکست پاک‌سازی اعلان‌ها و retry
+- [x] جداسازی `createdAt` فرمان از `effectiveAt` انتخابی رویداد موجودی
+- [x] رد تاریخ آینده در UI و application service
 
 ## Phase 3 — Notifications
 
@@ -57,6 +59,7 @@
 - [x] timezone initialization و fallback
 - [x] notification deep links
 - [x] committed Android project و debug APK build
+- [x] آغاز initialization اختیاری اعلان‌ها پس از first frame
 - [ ] تست روی دستگاه فیزیکی Android
 
 ## Phase 4 — Monetization integration
@@ -74,6 +77,9 @@
 - [x] automated accessibility audit برای مسیرهای بحرانی
 - [x] RTL and large-font tests در مقیاس‌های ۱٫۰، ۱٫۳ و ۲٫۰
 - [x] privacy center و destructive controls در ماتریس RTL و متن بزرگ
+- [x] formatter مرکزی تاریخ جلالی با ارقام فارسی
+- [x] Persian Material date/time picker برای ثبت اولیه و رویداد موجودی
+- [x] تست field جلالی در عرض ۳۶۰ و text scale 2.0
 - [ ] TalkBack، display-size و gesture audit روی دستگاه فیزیکی
 - [ ] integration tests روی دستگاه
 - [x] حذف debug signing از release و fail-fast بدون کلید معتبر
@@ -84,6 +90,12 @@
 - [x] workflow دستی برای APK نصب‌شدنی و AAB با یک signing identity
 - [x] checksum، build metadata و راهنمای نصب بدون SAI
 - [x] runbook نصب، clean install، upgrade، اعلان، privacy و TalkBack
+- [x] قرارداد ساخت universal و arm64 release APK
+- [x] نگهداری خود APKهای release در artifact به‌جای checksum تنها
+- [ ] ثبت اندازه واقعی universal و arm64 روی exact-head CI — Issue `#31`
+- [ ] عبور از سقف اولیه ۶۰ MiB universal و ۳۰ MiB arm64
+- [ ] نصب arm64 release APK و مقایسه cold/warm startup با debug
+- [ ] کاهش سقف‌ها به هدف ۴۵/۲۵ MiB پس از breakdown واقعی
 - [ ] ساخت upload keystore دائمی و backup رمزگذاری‌شده توسط مالک پروژه
 - [ ] تنظیم چهار GitHub Secret و ساخت نخستین APK/AAB دائمی
 - [ ] نصب clean روی دستگاه فیزیکی با Package Installer
