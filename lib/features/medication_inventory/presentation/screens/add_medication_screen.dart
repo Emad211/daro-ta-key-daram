@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/date/persian_date_time_field.dart';
 import '../../../../core/input/localized_number_parser.dart';
 import '../../application/medication_repository.dart';
 import '../../domain/consumption_schedule.dart';
@@ -34,7 +35,14 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
     amountPerOccurrence: 1,
     occurrencesPerDay: 1,
   );
+  late DateTime _inventoryRecordedAt;
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _inventoryRecordedAt = ref.read(clockProvider)();
+  }
 
   @override
   void dispose() {
@@ -47,6 +55,8 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final DateTime now = ref.read(clockProvider)();
+
     return Scaffold(
       appBar: AppBar(title: const Text('افزودن دارو')),
       body: SafeArea(
@@ -129,6 +139,18 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                 },
               ),
               const SizedBox(height: 14),
+              PersianDateTimeField(
+                key: const Key('add-medication-inventory-recorded-at'),
+                label: 'تاریخ و زمان موجودی',
+                value: _inventoryRecordedAt,
+                firstDate: DateTime(now.year - 20),
+                lastDate: now,
+                helperText: 'محاسبه موجودی از این تاریخ و زمان آغاز می‌شود.',
+                onChanged: (DateTime value) {
+                  setState(() => _inventoryRecordedAt = value);
+                },
+              ),
+              const SizedBox(height: 14),
               ConsumptionScheduleInput(
                 initialSchedule: _consumptionSchedule!,
                 onChanged: (ConsumptionSchedule? value) {
@@ -196,10 +218,19 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
       return;
     }
 
+    final DateTime now = ref.read(clockProvider)();
+    if (_inventoryRecordedAt.isAfter(now)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تاریخ موجودی نمی‌تواند در آینده باشد.'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
-      final DateTime now = ref.read(clockProvider)();
       final Medication medication = Medication(
         id: now.microsecondsSinceEpoch.toString(),
         name: _nameController.text,
@@ -208,7 +239,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
           _stockController.text,
         )!,
         consumptionSchedule: _consumptionSchedule,
-        inventoryRecordedAt: now,
+        inventoryRecordedAt: _inventoryRecordedAt,
         alertLeadDays: int.parse(
           LocalizedNumberParser.normalize(_alertDaysController.text),
         ),
