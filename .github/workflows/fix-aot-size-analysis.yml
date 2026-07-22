@@ -4,7 +4,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   fix-aot-analysis:
@@ -13,26 +13,18 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Checkout source branch
+      - name: Checkout pull-request head
         uses: actions/checkout@v4
+
+      - name: Generate patched CI workflow
+        run: |
+          python3 tool/fix_aot_size_analysis.py
+          cp .github/workflows/ci.yml patched-ci.yml
+
+      - name: Upload patched CI workflow
+        uses: actions/upload-artifact@v4
         with:
-          ref: agent/v1-release-candidate
-          fetch-depth: 0
-
-      - name: Fix size-analysis artifact discovery
-        run: python3 tool/fix_aot_size_analysis.py
-
-      - name: Remove one-time fixer
-        run: |
-          rm -f tool/fix_aot_size_analysis.py
-          rm -f .github/workflows/fix-aot-size-analysis.yml
-          rm -f .aot-fix-trigger
-
-      - name: Commit CI fix
-        run: |
-          git diff --check
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'ci: locate Flutter AOT size reports reliably'
-          git push origin HEAD:agent/v1-release-candidate
+          name: patched-v1-ci-workflow
+          path: patched-ci.yml
+          if-no-files-found: error
+          retention-days: 1
