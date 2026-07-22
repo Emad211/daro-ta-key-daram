@@ -129,6 +129,47 @@ void main() {
     expect(medication?.inventoryRecordedAt, initialTime);
   });
 
+  test('rejects an effective time before the current baseline', () async {
+    final DateTime baselineTime = DateTime.utc(2026, 7, 18, 8);
+    final DateTime commandTime = DateTime.utc(2026, 7, 20, 10);
+    final InMemoryMedicationRepository repository =
+        InMemoryMedicationRepository(
+          seed: <Medication>[
+            Medication(
+              id: 'medication-1',
+              name: 'متفورمین',
+              unit: MedicationUnit.tablet,
+              stockAtRecord: 30,
+              unitsPerDay: 2,
+              inventoryRecordedAt: baselineTime,
+            ),
+          ],
+        );
+    final InventoryEventService service = InventoryEventService(
+      repository,
+      () => commandTime,
+    );
+
+    await expectLater(
+      service.record(
+        medicationId: 'medication-1',
+        type: InventoryEventType.correction,
+        stockUnits: 12,
+        effectiveAt: baselineTime.subtract(const Duration(minutes: 1)),
+      ),
+      throwsArgumentError,
+    );
+
+    final List<InventoryEvent> events = await repository
+        .watchInventoryEvents('medication-1')
+        .first;
+    final Medication? medication = await repository.findById('medication-1');
+
+    expect(events, hasLength(1));
+    expect(medication?.stockAtRecord, 30);
+    expect(medication?.inventoryRecordedAt, baselineTime);
+  });
+
   test('rejects manual creation of an initial event', () async {
     final InMemoryMedicationRepository repository =
         InMemoryMedicationRepository();
