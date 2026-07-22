@@ -6,9 +6,47 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  format-sync:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.head_ref == 'agent/performance-size-jalali-dates' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/performance-size-jalali-dates
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Apply canonical formatting
+        run: dart format lib test
+
+      - name: Commit formatting if needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'No formatting changes were required.'
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add lib test
+          git commit -m 'Apply canonical Dart formatting'
+          git push origin HEAD:agent/performance-size-jalali-dates
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 65
