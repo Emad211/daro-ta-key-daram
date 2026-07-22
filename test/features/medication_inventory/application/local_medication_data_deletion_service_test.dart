@@ -35,7 +35,8 @@ void main() {
             ),
           );
 
-      final LocalMedicationDataDeletionResult result = await service.deleteAll();
+      final LocalMedicationDataDeletionResult result = await service
+          .deleteAll();
 
       expect(result.status, LocalMedicationDataDeletionStatus.completed);
       expect(result.notificationsCleared, isTrue);
@@ -90,11 +91,12 @@ void main() {
           );
       final _BlockingNotificationService notifications =
           _BlockingNotificationService();
-      final NotificationSyncCoordinator coordinator = NotificationSyncCoordinator(
-        medicationRepository: repository,
-        notificationService: notifications,
-        clock: () => now,
-      );
+      final NotificationSyncCoordinator coordinator =
+          NotificationSyncCoordinator(
+            medicationRepository: repository,
+            notificationService: notifications,
+            clock: () => now,
+          );
       final LocalMedicationDataDeletionService service =
           LocalMedicationDataDeletionService(repository, coordinator);
 
@@ -116,10 +118,11 @@ void main() {
       final LocalMedicationDataDeletionResult result = await deletion;
       expect(result.status, LocalMedicationDataDeletionStatus.completed);
       expect(notifications.scheduledIds, isEmpty);
-      expect(
-        notifications.operations,
-        <String>['schedule-start', 'schedule-complete', 'cancel-all'],
-      );
+      expect(notifications.operations, <String>[
+        'schedule-start',
+        'schedule-complete',
+        'cancel-all',
+      ]);
     },
   );
 }

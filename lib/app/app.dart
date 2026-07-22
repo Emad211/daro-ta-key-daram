@@ -62,7 +62,7 @@ class _DaroTaKeyAppState extends ConsumerState<DaroTaKeyApp> {
       title: 'دارو تا کی دارم؟',
       debugShowCheckedModeBanner: false,
       locale: const Locale('fa', 'IR'),
-      supportedLocales: const <Locale>[Locale('fa', 'IR'), Locale('en', 'US')],
+      supportedLocales: const <Locale>[Locale('fa', 'IR')],
       localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
         PersianMaterialLocalizations.delegate,
         PersianCupertinoLocalizations.delegate,

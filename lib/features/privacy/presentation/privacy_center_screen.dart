@@ -34,6 +34,8 @@ class _PrivacyCenterScreenState extends ConsumerState<PrivacyCenterScreen> {
           const _NotificationBoundaryCard(),
           const SizedBox(height: 12),
           const _AdvertisingBoundaryCard(),
+          const SizedBox(height: 12),
+          const _OpenSourceLicensesCard(),
           const SizedBox(height: 18),
           _DataDeletionCard(
             isBusy: _isBusy,
@@ -217,6 +219,35 @@ class _AdvertisingBoundaryCard extends StatelessWidget {
           'اطلاعاتی مانند نام دارو، موجودی، برنامه مصرف و یادداشت‌ها نباید به سرویس '
           'تبلیغاتی یا تحلیل فنی ارسال شوند. پیش از فعال‌شدن هر SDK ثالث، سیاست '
           'حریم خصوصی و افشای داده فروشگاه باید به‌روزرسانی شود.',
+    );
+  }
+}
+
+class _OpenSourceLicensesCard extends StatelessWidget {
+  const _OpenSourceLicensesCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          Icons.code_outlined,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        title: const Text('مجوزهای متن‌باز'),
+        subtitle: const Text(
+          'فهرست کتابخانه‌های استفاده‌شده و متن مجوزهای آن‌ها',
+        ),
+        trailing: const Icon(Icons.chevron_left),
+        onTap: () {
+          showLicensePage(
+            context: context,
+            applicationName: 'دارو تا کی دارم؟',
+            applicationVersion: '۱.۰.۰',
+            applicationLegalese: '© ۲۰۲۶ — تمامی حقوق محفوظ است.',
+          );
+        },
+      ),
     );
   }
 }
