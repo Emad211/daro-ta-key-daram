@@ -11,7 +11,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 75
 
     steps:
       - name: Checkout
@@ -48,17 +48,27 @@ jobs:
           test -z "$tracked"
           git check-ignore --no-index android/key.properties android/upload-keystore.jks
           ! grep -F 'signingConfigs.getByName("debug")' android/app/build.gradle.kts
+          grep -F 'isMinifyEnabled = true' android/app/build.gradle.kts
+          grep -F 'isShrinkResources = true' android/app/build.gradle.kts
+          grep -F 'android:allowBackup="false"' android/app/src/main/AndroidManifest.xml
+          grep -F 'android:usesCleartextTraffic="false"' android/app/src/main/AndroidManifest.xml
+          ! grep -R 'android.permission.INTERNET' android/app/src/main
+          ! grep -R 'com.google.android.gms.permission.AD_ID' android/app/src/main
           bash -n tool/bootstrap.sh
           bash -n tool/export_drift_schema.sh
           bash -n tool/build_signed_android_release.sh
+          python3 -m py_compile tool/generate_release_dossier.py
           grep -F 'flutter build apk' .github/workflows/android-release.yml
           grep -F -- '--split-per-abi' .github/workflows/android-release.yml
           grep -F 'flutter build appbundle' .github/workflows/android-release.yml
           grep -F 'apksigner' .github/workflows/android-release.yml
           grep -F 'INSTALL-APK-FA.txt' .github/workflows/android-release.yml
+          grep -F 'version: 1.0.0+1' pubspec.yaml
 
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          git diff --exit-code -- pubspec.lock
 
       - name: Generate Drift code
         run: dart run build_runner build --delete-conflicting-outputs
@@ -144,7 +154,7 @@ jobs:
       - name: Verify environment-backed release signing
         run: cd android && ./gradlew :app:verifyReleaseSigning
 
-      - name: Build ephemeral universal, arm64, and AAB releases
+      - name: Build optimized universal, arm64, and AAB releases
         shell: bash
         run: |
           set -euo pipefail
@@ -162,6 +172,16 @@ jobs:
           flutter build appbundle --release
           cp build/app/outputs/bundle/release/app-release.aab \
             "$output/daro-ta-key-release.aab"
+
+      - name: Generate arm64 AOT size analysis
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=build/app/outputs/release-validation
+          flutter build apk --release --target-platform=android-arm64 --analyze-size
+          size_file="$(find build -maxdepth 2 -type f -name '*code-size-analysis*.json' | sort | tail -n 1)"
+          test -n "$size_file"
+          cp "$size_file" "$output/arm64-code-size-analysis.json"
 
       - name: Verify signatures and record measured release sizes
         shell: bash
@@ -196,21 +216,35 @@ jobs:
           bundle_bytes="$(stat -c%s "$bundle")"
           universal_limit=$((61 * 1024 * 1024))
           arm64_limit=$((22 * 1024 * 1024))
+          version="$(awk '/^version:/{print $2; exit}' pubspec.yaml)"
+          signer_digest="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' /tmp/arm64-apk-signature.log | head -n 1)"
 
           cat > "$output/BUILD-METADATA.txt" <<EOF
           Product: Daro Ta Key Daram
+          Display name: دارو تا کی دارم؟
           Application ID: ir.emadkarimi.darutakey
+          Version: $version
           Commit: $GITHUB_SHA
           Workflow run: $GITHUB_RUN_NUMBER
           Signing identity: disposable CI validation key
+          APK signer certificate SHA-256: $signer_digest
           Universal APK bytes: $universal_bytes
           Arm64 APK bytes: $arm64_bytes
           AAB bytes: $bundle_bytes
           Universal APK measured limit bytes: $universal_limit
           Arm64 APK measured limit bytes: $arm64_limit
+          R8 minification: enabled
+          Android resource shrinking: enabled
+          Advertising SDK: disabled
+          Internet permission: absent by contract
           Performance conclusion: use release/profile on a physical device; debug is excluded
           Store/upload continuity: NOT ESTABLISHED by this disposable-key artifact
           EOF
+
+          mapping="$(find build/app/outputs/mapping/release -maxdepth 1 -type f -name mapping.txt 2>/dev/null | head -n 1 || true)"
+          if [[ -n "$mapping" ]]; then
+            cp "$mapping" "$output/android-r8-mapping.txt"
+          fi
 
           {
             echo '## Android release size evidence'
@@ -222,9 +256,29 @@ jobs:
             awk -v bytes="$bundle_bytes" 'BEGIN {printf "| AAB | %d | %.2f | n/a |\n", bytes, bytes/1048576}'
           } >> "$GITHUB_STEP_SUMMARY"
 
-          printf 'Universal APK: %s bytes\n' "$universal_bytes"
-          printf 'Arm64 APK: %s bytes\n' "$arm64_bytes"
-          printf 'AAB: %s bytes\n' "$bundle_bytes"
+      - name: Generate release-candidate dossier
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=build/app/outputs/release-validation
+          flutter pub deps --json > "$output/DEPENDENCIES.json"
+          python3 tool/generate_release_dossier.py \
+            --repo-root . \
+            --output "$output" \
+            --manifest-root build/app/intermediates \
+            --package-config .dart_tool/package_config.json \
+            --dependencies-json "$output/DEPENDENCIES.json"
+
+          mkdir -p "$output/store/cafebazaar/fa-IR" "$output/store/myket/fa-IR" "$output/docs"
+          cp store/cafebazaar/fa-IR/listing.md "$output/store/cafebazaar/fa-IR/"
+          cp store/myket/fa-IR/listing.md "$output/store/myket/fa-IR/"
+          cp docs/09-privacy-policy-fa.md "$output/docs/"
+          cp docs/13-v1-release-candidate.md "$output/docs/"
+          cp docs/14-release-rollback-and-incidents.md "$output/docs/"
+          cp docs/15-permissions-and-data-safety.md "$output/docs/"
+          cp docs/16-dependencies-and-licenses.md "$output/docs/"
+          cp docs/17-support-faq-fa.md "$output/docs/"
+          cp docs/18-terms-of-use-fa.md "$output/docs/"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -234,13 +288,13 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload measured CI release validation
+      - name: Upload v1 release-candidate dossier
         uses: actions/upload-artifact@v4
         with:
-          name: daro-ta-key-ci-release-validation
+          name: daro-ta-key-v1-release-candidate-dossier
           path: build/app/outputs/release-validation/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14
 
       - name: Enforce measured release size budgets
         shell: bash
