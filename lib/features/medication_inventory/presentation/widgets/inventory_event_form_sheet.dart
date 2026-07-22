@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/date/persian_date_formatter.dart';
+import '../../../../core/date/persian_date_time_field.dart';
 import '../../../../core/input/localized_number_parser.dart';
 import '../../domain/inventory_event.dart';
 import '../../domain/medication.dart';
@@ -28,10 +30,17 @@ class _InventoryEventFormSheetState
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _stockController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
+  late DateTime _effectiveAt;
   bool _isReviewing = false;
   bool _isSaving = false;
 
   bool get _isBusy => _isReviewing || _isSaving;
+
+  @override
+  void initState() {
+    super.initState();
+    _effectiveAt = ref.read(clockProvider)();
+  }
 
   @override
   void dispose() {
@@ -43,6 +52,7 @@ class _InventoryEventFormSheetState
   @override
   Widget build(BuildContext context) {
     final bool isRestock = widget.type == InventoryEventType.restock;
+    final DateTime now = ref.read(clockProvider)();
 
     return SafeArea(
       child: Padding(
@@ -112,6 +122,18 @@ class _InventoryEventFormSheetState
                   },
                 ),
                 const SizedBox(height: 14),
+                PersianDateTimeField(
+                  key: const Key('inventory-effective-at-input'),
+                  label: 'تاریخ و زمان اثر موجودی',
+                  value: _effectiveAt,
+                  firstDate: DateTime(now.year - 20),
+                  lastDate: now,
+                  helperText: 'برای خرید یا شمارش قبلی می‌توانید زمان گذشته را انتخاب کنید.',
+                  onChanged: (DateTime value) {
+                    setState(() => _effectiveAt = value);
+                  },
+                ),
+                const SizedBox(height: 14),
                 TextFormField(
                   key: const Key('inventory-note-input'),
                   controller: _noteController,
@@ -159,6 +181,16 @@ class _InventoryEventFormSheetState
       return;
     }
 
+    final DateTime now = ref.read(clockProvider)();
+    if (_effectiveAt.isAfter(now)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تاریخ رویداد موجودی نمی‌تواند در آینده باشد.'),
+        ),
+      );
+      return;
+    }
+
     final double stockUnits = LocalizedNumberParser.tryParseDouble(
       _stockController.text,
     )!;
@@ -183,6 +215,7 @@ class _InventoryEventFormSheetState
             medicationId: widget.medication.id,
             type: widget.type,
             stockUnits: stockUnits,
+            effectiveAt: _effectiveAt,
             note: _noteController.text,
           );
 
@@ -236,6 +269,11 @@ class _InventoryEventFormSheetState
                 Text(
                   'مبنای جدید پس از ثبت: ${_number(stockUnits)} $unit',
                   style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'زمان اثر: ${PersianDateFormatter.dateTime(_effectiveAt)}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
                 const Text(
