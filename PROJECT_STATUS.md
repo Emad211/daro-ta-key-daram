@@ -34,23 +34,35 @@ Implemented on the branch:
 - Jalali date/time fields for medication creation, restock, and correction.
 - Jalali depletion dates and inventory history.
 - Gregorian Dart `DateTime` retained inside domain, persistence, calculations, and notifications.
-- Past inventory effective times supported; future times rejected in UI and application service.
+- Past inventory effective times supported only from the current inventory baseline onward.
+- Future and pre-baseline times rejected in UI, application service, Drift, and in-memory repositories.
 - Command `createdAt` remains distinct from selected `effectiveAt`.
 - Optional notification initialization deferred until after the first rendered frame.
 - Debug/profile startup milestones without medication or user data.
 - Universal and arm64 release APK outputs plus AAB.
 - Actual APK files preserved in CI artifacts rather than checksum-only output.
-- `apksigner`, `jarsigner`, SHA-256, byte-size metadata, and initial regression budgets.
-- Unit/widget coverage for known Jalali conversions, Persian digits, large text, backdating, and future-date rejection.
+- `apksigner`, `jarsigner`, SHA-256, byte-size metadata, and measured regression budgets.
+- Unit/widget/repository coverage for known Jalali conversions, Persian digits, large text, backdating, future rejection, and baseline monotonicity.
+
+## Measured release evidence
+
+CI run `#374` produced verified files using a disposable validation key:
+
+- arm64 release APK: `21,796,928` bytes (`20.79 MiB`);
+- universal release APK: `63,045,908` bytes (`60.13 MiB`);
+- AAB: `60,726,842` bytes (`57.91 MiB`);
+- arm64 APK SHA-256: `86502f9b6decb1913101fab51f55b015b68415e40ec0756037f84f63300d585b`.
+
+The arm64 package is roughly one seventh of the installed debug APK. The measured budgets are now 22 MiB for arm64 and 61 MiB for universal.
+
+The arm64 APK is dominated by Flutter engine (`11.05 MiB`), AOT application code (`7.31 MiB`), and SQLite (`1.65 MiB`). R8/resource shrinking cannot remove most of this footprint, so further size work must use `--analyze-size` and measured AOT changes.
 
 Still required before merge:
 
-- exact-head analyzer and full regression suite;
-- exact universal/arm64 release sizes from CI;
-- passage of the initial 60 MiB universal and 30 MiB arm64 gates;
-- inspection of the release-validation artifact contents;
+- exact-head analyzer and complete regression suite after final repository guards;
+- exact-head universal/arm64 builds, signature checks, checksums, artifact upload, and 61/22 MiB budgets;
 - installation and responsiveness comparison of the arm64 release APK on a physical device;
-- acceptance of ADR-0013 after evidence is complete.
+- acceptance of ADR-0013 after automated and device evidence is complete.
 
 ## Maintainer-owned release material still required
 
@@ -79,9 +91,9 @@ Still required before merge:
 
 ## Next engineering increments
 
-1. Complete and merge PR `#32` after exact-head release measurements and device comparison.
-2. Tighten release-size budgets from evidence and decide whether R8/resource shrinking is justified.
-3. Add a stable profile-mode benchmark target for repeatable startup evidence.
+1. Complete PR `#32` after exact-head CI and physical arm64 comparison.
+2. Add `--analyze-size` tracking and a stable profile-mode startup benchmark target.
+3. Keep arm64 below 22 MiB and investigate only measured regressions in `libapp.so`.
 4. Create and protect the permanent upload key and configure repository secrets.
 5. Integrate Adivery behind `AdService` with the safety caps in Issue `#3`.
 6. Finalize privacy/store metadata and start a 10–20 user closed beta.
