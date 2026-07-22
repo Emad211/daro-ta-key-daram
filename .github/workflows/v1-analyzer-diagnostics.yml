@@ -1,15 +1,14 @@
 name: V1 Analyzer Diagnostics
 
 on:
-  push:
-    branches:
-      - agent/v1-release-candidate
+  pull_request:
 
 permissions:
   contents: read
 
 jobs:
   analyzer-diagnostics:
+    if: github.head_ref == 'agent/v1-release-candidate'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
