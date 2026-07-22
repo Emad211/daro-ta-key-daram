@@ -1,0 +1,40 @@
+name: Package Release Assets
+
+on:
+  push:
+    branches:
+      - agent/v1-release-candidate
+
+permissions:
+  contents: write
+
+jobs:
+  package-release-assets:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout source branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/v1-release-candidate
+          fetch-depth: 0
+
+      - name: Add brand and Cafe Bazaar material to release artifacts
+        run: python3 tool/apply_release_bundle_assets.py
+
+      - name: Remove one-time packager
+        run: |
+          rm -f tool/apply_release_bundle_assets.py
+          rm -f .github/workflows/package-release-assets.yml
+          rm -f .release-assets-trigger
+
+      - name: Commit release packaging updates
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'ci: include brand and Bazaar assets in release packages'
+          git push origin HEAD:agent/v1-release-candidate
