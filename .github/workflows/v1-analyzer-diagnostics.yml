@@ -1,0 +1,50 @@
+name: V1 Analyzer Diagnostics
+
+on:
+  push:
+    branches:
+      - agent/v1-release-candidate
+
+permissions:
+  contents: read
+
+jobs:
+  analyzer-diagnostics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate Drift code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Capture analyzer output
+        shell: bash
+        run: |
+          set +e
+          flutter analyze 2>&1 | tee v1-analyzer-output.txt
+          status=${PIPESTATUS[0]}
+          echo "$status" > v1-analyzer-status.txt
+          exit 0
+
+      - name: Upload diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: v1-analyzer-diagnostics
+          path: |
+            v1-analyzer-output.txt
+            v1-analyzer-status.txt
+          if-no-files-found: error
+          retention-days: 1
