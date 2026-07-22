@@ -103,6 +103,20 @@ final class DriftMedicationRepository implements MedicationRepository {
         operation: MedicationLifecycleOperation.recordInventoryEvent,
       );
 
+      final InventoryEventRow? latest = await _latestInventoryEvent(
+        event.medicationId,
+      );
+      if (latest == null) {
+        throw StateError('The aggregate has no inventory baseline event.');
+      }
+      if (effectiveAt.isBefore(latest.effectiveAt)) {
+        throw ArgumentError.value(
+          event.effectiveAt,
+          'event.effectiveAt',
+          'Inventory events cannot precede the current inventory baseline.',
+        );
+      }
+
       await _insertInventoryEvent(event, effectiveAt: effectiveAt);
       await (_database.update(_database.medications)
             ..where((Medications table) => table.id.equals(event.medicationId)))
