@@ -128,7 +128,8 @@ class _InventoryEventFormSheetState
                   value: _effectiveAt,
                   firstDate: DateTime(now.year - 20),
                   lastDate: now,
-                  helperText: 'برای خرید یا شمارش قبلی می‌توانید زمان گذشته را انتخاب کنید.',
+                  helperText:
+                      'برای خرید یا شمارش قبلی می‌توانید زمان گذشته را انتخاب کنید.',
                   onChanged: (DateTime value) {
                     setState(() => _effectiveAt = value);
                   },

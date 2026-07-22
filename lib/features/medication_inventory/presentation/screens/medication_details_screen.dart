@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/date/persian_date_formatter.dart';
+
 import '../../application/medication_repository.dart';
 import '../../domain/consumption_schedule_formatter.dart';
 import '../../domain/inventory_event.dart';
@@ -388,7 +390,7 @@ class _StockSummaryCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '${snapshot.fullRemainingDays} روز کامل باقی‌مانده • '
-              'اتمام تقریبی ${_date(snapshot.depletionAt)}',
+              'اتمام تقریبی ${PersianDateFormatter.date(snapshot.depletionAt)}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -551,7 +553,7 @@ class _InventoryTimeline extends StatelessWidget {
             ),
             title: Text(event.type.persianLabel),
             subtitle: Text(
-              '${_dateTime(event.effectiveAt)}'
+              '${PersianDateFormatter.dateTime(event.effectiveAt)}'
               '${hasNote ? '\n${event.note}' : ''}',
             ),
             trailing: Text(
@@ -647,17 +649,6 @@ class _HistoryError extends StatelessWidget {
       ),
     );
   }
-}
-
-String _date(DateTime value) {
-  return '${value.year}/${value.month.toString().padLeft(2, '0')}/'
-      '${value.day.toString().padLeft(2, '0')}';
-}
-
-String _dateTime(DateTime value) {
-  return '${_date(value)} • '
-      '${value.hour.toString().padLeft(2, '0')}:'
-      '${value.minute.toString().padLeft(2, '0')}';
 }
 
 String _number(double value) {

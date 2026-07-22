@@ -221,9 +221,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
     final DateTime now = ref.read(clockProvider)();
     if (_inventoryRecordedAt.isAfter(now)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تاریخ موجودی نمی‌تواند در آینده باشد.'),
-        ),
+        const SnackBar(content: Text('تاریخ موجودی نمی‌تواند در آینده باشد.')),
       );
       return;
     }
