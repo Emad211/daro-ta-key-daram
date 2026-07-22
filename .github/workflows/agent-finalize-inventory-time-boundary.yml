@@ -1,0 +1,98 @@
+name: Agent Finalize Inventory Time Boundary
+
+on:
+  push:
+    branches: [agent/performance-size-jalali-dates]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/performance-size-jalali-dates
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Enforce Drift and picker baseline boundary
+        shell: python
+        run: |
+          from pathlib import Path
+
+          form_path = Path('lib/features/medication_inventory/presentation/widgets/inventory_event_form_sheet.dart')
+          form = form_path.read_text(encoding='utf-8')
+          old = """                  firstDate: DateTime(now.year - 20),
+                  lastDate: now,
+                  helperText:
+                      'برای خرید یا شمارش قبلی می‌توانید زمان گذشته را انتخاب کنید.',
+"""
+          new = """                  firstDate: widget.medication.inventoryRecordedAt,
+                  lastDate: now,
+                  helperText:
+                      'زمان انتخابی نباید قبل از آخرین مبنای موجودی باشد.',
+"""
+          if old not in form:
+              raise SystemExit('Inventory form date range marker was not found')
+          form_path.write_text(form.replace(old, new, 1), encoding='utf-8')
+
+          drift_path = Path('lib/features/medication_inventory/infrastructure/drift_medication_repository.dart')
+          drift = drift_path.read_text(encoding='utf-8')
+          old = """      MedicationLifecyclePolicy.ensureAllowed(
+        medicationId: event.medicationId,
+        isArchived: medication?.isArchived,
+        operation: MedicationLifecycleOperation.recordInventoryEvent,
+      );
+
+      await _insertInventoryEvent(event, effectiveAt: effectiveAt);
+"""
+          new = """      MedicationLifecyclePolicy.ensureAllowed(
+        medicationId: event.medicationId,
+        isArchived: medication?.isArchived,
+        operation: MedicationLifecycleOperation.recordInventoryEvent,
+      );
+
+      final InventoryEventRow? latest = await _latestInventoryEvent(
+        event.medicationId,
+      );
+      if (latest == null) {
+        throw StateError('The aggregate has no inventory baseline event.');
+      }
+      if (effectiveAt.isBefore(latest.effectiveAt)) {
+        throw ArgumentError.value(
+          event.effectiveAt,
+          'event.effectiveAt',
+          'Inventory events cannot precede the current inventory baseline.',
+        );
+      }
+
+      await _insertInventoryEvent(event, effectiveAt: effectiveAt);
+"""
+          if old not in drift:
+              raise SystemExit('Drift inventory insertion marker was not found')
+          drift_path.write_text(drift.replace(old, new, 1), encoding='utf-8')
+
+      - name: Format changed Dart files
+        run: dart format lib/features/medication_inventory/infrastructure/drift_medication_repository.dart lib/features/medication_inventory/presentation/widgets/inventory_event_form_sheet.dart
+
+      - name: Commit synchronized files and remove this workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/agent-finalize-inventory-time-boundary.yml
+          git add lib
+          git commit -m "Finalize inventory effective time boundary"
+          git push origin HEAD:agent/performance-size-jalali-dates
