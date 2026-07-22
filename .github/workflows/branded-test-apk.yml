@@ -1,0 +1,110 @@
+name: Branded Arm64 Test APK
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-branded-arm64:
+    if: github.head_ref == 'agent/v1-release-candidate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout pull-request head
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Validate brand and release identity
+        run: |
+          python3 tool/check_brand_assets.py
+          grep -F 'version: 1.0.0+1' pubspec.yaml
+          grep -F 'android:icon="@mipmap/ic_launcher"' android/app/src/main/AndroidManifest.xml
+
+      - name: Install dependencies and generate code
+        run: |
+          flutter pub get
+          git diff --exit-code -- pubspec.lock
+          dart run build_runner build --delete-conflicting-outputs
+
+      - name: Generate disposable test signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          password="$(openssl rand -hex 24)"
+          echo "::add-mask::$password"
+          keytool -genkeypair \
+            -keystore android/branded-test-keystore.jks \
+            -storetype JKS \
+            -storepass "$password" \
+            -keypass "$password" \
+            -alias branded-test \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 3650 \
+            -dname 'CN=Daro Ta Key Branded Test, OU=Release Validation, O=CI, C=IR' \
+            -noprompt
+          {
+            echo "ANDROID_UPLOAD_STORE_PASSWORD=$password"
+            echo "ANDROID_UPLOAD_KEY_PASSWORD=$password"
+            echo 'ANDROID_UPLOAD_KEY_ALIAS=branded-test'
+            echo 'ANDROID_UPLOAD_STORE_FILE=branded-test-keystore.jks'
+          } >> "$GITHUB_ENV"
+
+      - name: Build branded arm64 release APK
+        run: flutter build apk --release --target-platform=android-arm64
+
+      - name: Verify and package APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_apk=build/app/outputs/flutter-apk/app-release.apk
+          output=build/branded-test
+          apk="$output/daro-ta-key-v1.0.0-arm64-branded-test.apk"
+          mkdir -p "$output"
+          test -f "$source_apk"
+          cp "$source_apk" "$apk"
+          apksigner="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$apksigner"
+          "$apksigner" verify --verbose --print-certs "$apk" | tee "$output/APK-SIGNATURE.txt"
+          grep -Eq 'Verified using v2 scheme.*: true|Verified using v3 scheme.*: true' "$output/APK-SIGNATURE.txt"
+          sha256sum "$apk" > "$apk.sha256"
+          bytes="$(stat -c%s "$apk")"
+          test "$bytes" -le $((22 * 1024 * 1024))
+          cat > "$output/BUILD-METADATA.txt" <<EOF
+          Product: دارو تا کی دارم؟
+          Version: 1.0.0+1
+          Application ID: ir.emadkarimi.darutakey
+          Commit: $GITHUB_SHA
+          Architecture: arm64-v8a
+          APK bytes: $bytes
+          Launcher branding: custom adaptive/monochrome icon
+          Splash branding: custom
+          Signing: disposable CI test key; not for store upload or upgrade continuity
+          EOF
+
+      - name: Upload branded arm64 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: daro-ta-key-v1-branded-arm64-test
+          path: build/branded-test/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove disposable signing key
+        if: always()
+        run: rm -f android/branded-test-keystore.jks android/key.properties
