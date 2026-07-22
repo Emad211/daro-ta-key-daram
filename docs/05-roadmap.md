@@ -48,7 +48,9 @@
 - [x] حذف اتمیک aggregateها و تاریخچه وابسته
 - [x] outcome جداگانه برای شکست پاک‌سازی اعلان‌ها و retry
 - [x] جداسازی `createdAt` فرمان از `effectiveAt` انتخابی رویداد موجودی
-- [x] رد تاریخ آینده در UI و application service
+- [x] رد تاریخ آینده در UI، service و repositoryها
+- [x] رد رویداد قدیمی‌تر از آخرین baseline در UI، service، Drift و InMemory
+- [x] تست parity و عدم side effect برای مرز زمانی inventory
 
 ## Phase 3 — Notifications
 
@@ -92,10 +94,13 @@
 - [x] runbook نصب، clean install، upgrade، اعلان، privacy و TalkBack
 - [x] قرارداد ساخت universal و arm64 release APK
 - [x] نگهداری خود APKهای release در artifact به‌جای checksum تنها
-- [ ] ثبت اندازه واقعی universal و arm64 روی exact-head CI — Issue `#31`
-- [ ] عبور از سقف اولیه ۶۰ MiB universal و ۳۰ MiB arm64
+- [x] اندازه‌گیری واقعی: arm64 برابر ۲۰٫۷۹ MiB و universal برابر ۶۰٫۱۳ MiB
+- [x] breakdown فایل arm64: Flutter ۱۱٫۰۵، AOT app ۷٫۳۱ و SQLite ۱٫۶۵ MiB
+- [x] budget مبتنی بر evidence: سقف ۶۱ MiB universal و ۲۲ MiB arm64
 - [ ] نصب arm64 release APK و مقایسه cold/warm startup با debug
-- [ ] کاهش سقف‌ها به هدف ۴۵/۲۵ MiB پس از breakdown واقعی
+- [ ] ثبت first usable dashboard و first tap response روی دستگاه نام‌دار
+- [ ] بررسی `--analyze-size` برای رشد آینده `libapp.so`
+- [ ] کاهش arm64 به زیر ۲۰ MiB فقط با بهینه‌سازی اندازه‌گیری‌شده و امن
 - [ ] ساخت upload keystore دائمی و backup رمزگذاری‌شده توسط مالک پروژه
 - [ ] تنظیم چهار GitHub Secret و ساخت نخستین APK/AAB دائمی
 - [ ] نصب clean روی دستگاه فیزیکی با Package Installer
