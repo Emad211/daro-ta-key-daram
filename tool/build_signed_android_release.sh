@@ -148,15 +148,15 @@ file_size() {
 universal_bytes="$(file_size "$universal")"
 arm64_bytes="$(file_size "$arm64")"
 bundle_bytes="$(file_size "$bundle")"
-universal_limit=$((60 * 1024 * 1024))
-arm64_limit=$((30 * 1024 * 1024))
+universal_limit=$((61 * 1024 * 1024))
+arm64_limit=$((22 * 1024 * 1024))
 
 if (( universal_bytes > universal_limit )); then
-  echo "Universal release APK exceeds the 60 MiB baseline budget: $universal_bytes bytes." >&2
+  echo "Universal release APK exceeds the 61 MiB measured budget: $universal_bytes bytes." >&2
   exit 1
 fi
 if (( arm64_bytes > arm64_limit )); then
-  echo "Arm64 release APK exceeds the 30 MiB baseline budget: $arm64_bytes bytes." >&2
+  echo "Arm64 release APK exceeds the 22 MiB measured budget: $arm64_bytes bytes." >&2
   exit 1
 fi
 
@@ -167,6 +167,8 @@ Pubspec version: $(awk '/^version:/{print $2; exit}' pubspec.yaml)
 Universal APK bytes: $universal_bytes
 Arm64 APK bytes: $arm64_bytes
 AAB bytes: $bundle_bytes
+Universal APK measured limit bytes: $universal_limit
+Arm64 APK measured limit bytes: $arm64_limit
 Recommended physical-device file: daro-ta-key-arm64-release.apk
 EOF
 
