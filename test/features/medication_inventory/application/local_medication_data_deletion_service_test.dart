@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:daro_ta_key_daram/features/medication_inventory/application/local_medication_data_deletion_service.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication.dart';
 import 'package:daro_ta_key_daram/features/medication_inventory/domain/medication_unit.dart';
@@ -78,6 +80,51 @@ void main() {
     expect(await service.retryNotificationCleanup(), isTrue);
     expect(notifications.cancelAllCalls, 2);
   });
+
+  test(
+    'privacy erasure waits for an in-flight rebuild and remains the final operation',
+    () async {
+      final InMemoryMedicationRepository repository =
+          InMemoryMedicationRepository(
+            seed: <Medication>[_medication(id: 'active', now: now)],
+            clock: () => now,
+          );
+      final _BlockingNotificationService notifications =
+          _BlockingNotificationService();
+      final NotificationSyncCoordinator coordinator =
+          NotificationSyncCoordinator(
+            medicationRepository: repository,
+            notificationService: notifications,
+            clock: () => now,
+          );
+      final LocalMedicationDataDeletionService service =
+          LocalMedicationDataDeletionService(repository, coordinator);
+
+      final Future<int> rebuild = coordinator.rebuildAll();
+      await notifications.scheduleStarted.future;
+
+      final Future<LocalMedicationDataDeletionResult> deletion = service
+          .deleteAll();
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        await repository.watchActiveMedications().first,
+        isEmpty,
+        reason: 'Database erasure is independent from notification cleanup.',
+      );
+
+      notifications.allowScheduleToFinish.complete();
+
+      expect(await rebuild, 1);
+      final LocalMedicationDataDeletionResult result = await deletion;
+      expect(result.status, LocalMedicationDataDeletionStatus.completed);
+      expect(notifications.scheduledIds, isEmpty);
+      expect(notifications.operations, <String>[
+        'schedule-start',
+        'schedule-complete',
+        'cancel-all',
+      ]);
+    },
+  );
 }
 
 Medication _medication({
@@ -126,4 +173,44 @@ final class _DeletionNotificationService implements LocalNotificationService {
 
   @override
   Future<void> schedule(NotificationPlan plan) async {}
+}
+
+final class _BlockingNotificationService implements LocalNotificationService {
+  final Completer<void> scheduleStarted = Completer<void>();
+  final Completer<void> allowScheduleToFinish = Completer<void>();
+  final Set<int> scheduledIds = <int>{};
+  final List<String> operations = <String>[];
+
+  @override
+  Future<void> schedule(NotificationPlan plan) async {
+    operations.add('schedule-start');
+    scheduleStarted.complete();
+    await allowScheduleToFinish.future;
+    scheduledIds.add(plan.id);
+    operations.add('schedule-complete');
+  }
+
+  @override
+  Future<void> cancelAll() async {
+    operations.add('cancel-all');
+    scheduledIds.clear();
+  }
+
+  @override
+  Future<void> cancel(int notificationId) async {
+    scheduledIds.remove(notificationId);
+  }
+
+  @override
+  Future<void> initialize({required NotificationTapHandler onTap}) async {}
+
+  @override
+  Future<NotificationPermissionState> permissionState() async {
+    return NotificationPermissionState.granted;
+  }
+
+  @override
+  Future<NotificationPermissionState> requestPermission() async {
+    return NotificationPermissionState.granted;
+  }
 }

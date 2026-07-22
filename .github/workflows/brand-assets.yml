@@ -1,0 +1,21 @@
+name: Brand Assets
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-brand-assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate launcher, splash, notification, and store icon assets
+        run: python3 tool/check_brand_assets.py

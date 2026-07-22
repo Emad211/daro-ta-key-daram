@@ -1,0 +1,38 @@
+name: Apply AOT Size Analysis Fix
+
+on:
+  push:
+    branches:
+      - agent/v1-release-candidate
+
+permissions:
+  contents: write
+
+jobs:
+  apply-aot-fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout release-candidate branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/v1-release-candidate
+
+      - name: Patch AOT analysis discovery
+        run: python3 tool/fix_aot_size_analysis.py
+
+      - name: Commit the fix and remove temporary automation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/fix-aot-size-analysis.yml
+          if [[ -f .aot-fix-trigger ]]; then
+            git rm .aot-fix-trigger
+          fi
+          git add .github/workflows/ci.yml
+          git commit -m "Fix arm64 AOT size-analysis discovery"
+          git push origin HEAD:agent/v1-release-candidate
