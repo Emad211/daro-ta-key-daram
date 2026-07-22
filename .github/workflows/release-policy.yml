@@ -1,0 +1,30 @@
+name: Release Policy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-release-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate static release candidate contract
+        run: python3 tool/check_release_candidate.py
+
+      - name: Validate brand assets
+        run: python3 tool/check_brand_assets.py
+
+      - name: Validate release shell commands
+        run: |
+          bash -n tool/check_apk_permissions.sh
+          bash -n tool/release_readiness.sh
+          bash -n tool/build_signed_android_release.sh
